@@ -1,0 +1,12 @@
+package com.example.exercisetracker.presentation.home
+
+sealed interface ExerciseListAction {
+    data object OnStartWorkout : ExerciseListAction
+    data class OnShowMuscleDialog(val show: Boolean) : ExerciseListAction
+    data class OnShowExerciseDialog(val show: Boolean) : ExerciseListAction
+    data class OnMuscleSelected(val muscleId: Int) : ExerciseListAction
+    data class OnSearchQueryChange(val query: String) : ExerciseListAction
+    data class OnExerciseSelected(val exerciseId: Int) : ExerciseListAction
+    data class OnAddExercise(val name: String) : ExerciseListAction
+    data class OnAddMuscle(val name: String) : ExerciseListAction
+}

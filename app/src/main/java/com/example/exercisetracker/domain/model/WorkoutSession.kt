@@ -1,0 +1,8 @@
+package com.example.exercisetracker.domain.model
+
+data class WorkoutSession(
+    val id: Int = 0,
+    val startTime: Long,
+    val endTime: Long?,
+    val isCompleted: Boolean = false
+)
