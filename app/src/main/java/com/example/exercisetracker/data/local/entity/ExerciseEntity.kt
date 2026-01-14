@@ -1,4 +1,4 @@
-package com.example.exercisetracker.data.local
+package com.example.exercisetracker.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey

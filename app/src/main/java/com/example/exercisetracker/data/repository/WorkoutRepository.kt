@@ -1,7 +1,7 @@
 package com.example.exercisetracker.data.repository
 
-import com.example.exercisetracker.data.local.WorkoutDao
-import com.example.exercisetracker.data.local.WorkoutSessionEntity
+import com.example.exercisetracker.data.local.dao.WorkoutDao
+import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 import com.example.exercisetracker.data.mapper.toDomain
 import com.example.exercisetracker.data.mapper.toEntity
 import com.example.exercisetracker.domain.model.WorkoutSession
@@ -11,36 +11,38 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class WorkoutRepository(private val workoutDao: WorkoutDao) : IWorkoutRepository {
-    
-    override suspend fun getActiveSession(): WorkoutSession? {
-        return workoutDao.getActiveSession()?.toDomain()
+
+    override suspend fun getAllActiveSession(): List<WorkoutSession>? {
+        return workoutDao.getAllActiveSession()?.map { it.toDomain() }
     }
-    
-    override fun getActiveSessionFlow(): Flow<WorkoutSession?> {
-        return workoutDao.getActiveSessionFlow()
+
+    override suspend fun getActiveSessionId(): Int? = workoutDao.getActiveSessionId()
+
+    override fun getLastActiveSessionSets(): Flow<List<WorkoutSet>> {
+        return workoutDao.getLastActiveSessionSets()
+            .map { list -> list.map { it.toDomain() } }
+    }
+
+    override fun getLastActiveSessionFlow(): Flow<WorkoutSession?> {
+        return workoutDao.getLastActiveSessionFlow()
             .map { it?.toDomain() }
     }
 
-    override suspend fun startNewSession(): WorkoutSession {
-        val existingSession = workoutDao.getActiveSession()
-        if (existingSession != null) {
-            return existingSession.toDomain()
-        }
-        
+    override suspend fun startNewSession(exercises: List<Int>): WorkoutSession {
         val newSession = WorkoutSessionEntity(
             startTime = System.currentTimeMillis(),
             endTime = null,
+            exercises = exercises,
             isCompleted = false
         )
         val id = workoutDao.insertSession(newSession)
         return newSession.copy(id = id.toInt()).toDomain()
     }
 
-    override suspend fun completeSession(sessionId: Int) {
-        val session = workoutDao.getActiveSession() ?: return
-        if (session.id == sessionId) {
+    override suspend fun completeOpenSessions() {
+        workoutDao.getAllActiveSession()?.forEach {
             workoutDao.updateSession(
-                session.copy(
+                it.copy(
                     endTime = System.currentTimeMillis(),
                     isCompleted = true
                 )
@@ -48,13 +50,17 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) : IWorkoutRepository
         }
     }
 
-    override suspend fun saveSets(sessionId: Int, sets: List<WorkoutSet>) {
-        workoutDao.clearSetsForSession(sessionId)
+    override suspend fun saveSets(sessionId: Int, exerciseId: Int, sets: List<WorkoutSet>) {
+        workoutDao.clearExerciseSets(sessionId, exerciseId)
         workoutDao.insertSets(sets.map { it.toEntity() })
     }
 
     override fun getSetsForSession(sessionId: Int): Flow<List<WorkoutSet>> {
         return workoutDao.getSetsForSession(sessionId)
             .map { list -> list.map { it.toDomain() } }
+    }
+
+    override suspend fun updateSet(set: WorkoutSet) {
+        workoutDao.updateSet(set.toEntity())
     }
 }

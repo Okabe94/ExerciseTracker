@@ -26,39 +26,53 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 import com.example.exercisetracker.R
-import org.koin.androidx.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
+
+@Composable
+fun WorkoutSessionRoot(
+    backStack: NavBackStack<NavKey>,
+    viewModel: WorkoutSessionViewModel
+) {
+    val state by viewModel.state.collectAsState()
+    WorkoutSessionScreen(
+        state = state,
+        onAction = {
+            viewModel.onAction(it)
+
+            when (it) {
+                WorkoutSessionAction.OnFinishWorkout -> backStack.removeLast()
+                else -> Unit
+            }
+        },
+    )
+}
 
 @Composable
 fun WorkoutSessionScreen(
-    exerciseIds: Set<Int>,
-    onFinish: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: WorkoutSessionViewModel = koinViewModel(parameters = { parametersOf(exerciseIds) })
+    onAction: (WorkoutSessionAction) -> Unit,
+    state: WorkoutSessionState
 ) {
-    val exercises by viewModel.exercises.collectAsState()
-    val sets by viewModel.sets.collectAsState()
-
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         bottomBar = {
             Button(
-                onClick = {
-                    viewModel.finishWorkout()
-                    onFinish()
-                },
+                onClick = { onAction(WorkoutSessionAction.OnFinishWorkout) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Text("Finish Workout")
+                Text(stringResource(R.string.finish))
             }
         }
     ) { innerPadding ->
+
         LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
@@ -66,16 +80,34 @@ fun WorkoutSessionScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(16.dp)
         ) {
-            items(exercises, key = { it.id }) { exercise ->
+            items(
+                items = state.listOfExercises,
+                key = { it.id }
+            ) { exercise ->
+
                 ExerciseSessionCard(
                     exerciseName = exercise.name,
-                    sets = sets[exercise.id] ?: emptyList(),
-                    onAddSet = { viewModel.addSet(exercise.id) },
+                    sets = exercise.sets,
+                    onAddSet = {
+                        onAction(WorkoutSessionAction.OnAddSet(exercise.id))
+                    },
                     onUpdateSet = { setId, weight, reps ->
-                        viewModel.updateSet(exercise.id, setId, weight, reps)
+                        onAction(
+                            WorkoutSessionAction.OnUpdateSet(
+                                exerciseId = exercise.id,
+                                setId = setId,
+                                weight = weight,
+                                reps = reps
+                            )
+                        )
                     },
                     onRemoveSet = { setId ->
-                        viewModel.removeSet(exercise.id, setId)
+                        onAction(
+                            WorkoutSessionAction.OnRemoveSet(
+                                exerciseId = exercise.id,
+                                setId = setId
+                            )
+                        )
                     }
                 )
             }
@@ -84,12 +116,12 @@ fun WorkoutSessionScreen(
 }
 
 @Composable
-fun ExerciseSessionCard(
+private fun ExerciseSessionCard(
     exerciseName: String,
-    sets: List<UiWorkoutSet>,
+    sets: List<WorkoutSessionSet>,
     onAddSet: () -> Unit,
-    onUpdateSet: (String, String, String) -> Unit,
-    onRemoveSet: (String) -> Unit
+    onUpdateSet: (Int, String, String) -> Unit,
+    onRemoveSet: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -123,12 +155,12 @@ fun ExerciseSessionCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Weight",
+                        text = stringResource(R.string.weight),
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        text = "Reps",
+                        text = stringResource(R.string.reps),
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall
                     )

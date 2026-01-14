@@ -10,5 +10,5 @@ sealed interface Route : NavKey {
     data object Home : Route, NavKey
 
     @Serializable
-    data class Workout(val exerciseIds: List<Int>) : Route, NavKey
+    data object Workout : Route, NavKey
 }

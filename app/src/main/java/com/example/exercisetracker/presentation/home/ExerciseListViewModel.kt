@@ -7,10 +7,12 @@ import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,7 +24,7 @@ class ExerciseListViewModel(
 ) : ViewModel() {
 
     private val _internalState = MutableStateFlow(InternalState())
-    private val _activeWorkout = workoutRepository.getActiveSessionFlow()
+    private val _activeWorkout = workoutRepository.getLastActiveSessionFlow()
 
     val state: StateFlow<ExerciseListState> = combine(
         _internalState,
@@ -46,10 +48,10 @@ class ExerciseListViewModel(
             searchQuery = internal.searchQuery,
             filteredMuscles = filteredMuscles,
             filteredExercises = filteredExercises,
-            activeWorkoutButtonVisible = active != null,
+            hasActiveWorkout = active != null,
             startWorkoutButtonVisible = internal.selectedExerciseIds.isNotEmpty(),
-            selectedMuscleIds = internal.selectedMuscleIds,
-            selectedExerciseIds = internal.selectedExerciseIds,
+            selectedMuscleIds = internal.selectedMuscleIds.toList(),
+            selectedExerciseIds = internal.selectedExerciseIds.toList(),
             addMuscleDialogVisible = internal.muscleDialogVisible,
             addExerciseDialogVisible = internal.exerciseDialogVisible,
         )
@@ -59,10 +61,8 @@ class ExerciseListViewModel(
         initialValue = ExerciseListState()
     )
 
-
     fun onAction(action: ExerciseListAction) {
         when (action) {
-            ExerciseListAction.OnStartWorkout -> TODO()
             is ExerciseListAction.OnAddMuscle -> addMuscle(action.name)
             is ExerciseListAction.OnAddExercise -> addExercise(action.name)
             is ExerciseListAction.OnMuscleSelected -> toggleMuscleSelection(action.muscleId)
@@ -76,6 +76,17 @@ class ExerciseListViewModel(
             is ExerciseListAction.OnShowMuscleDialog -> _internalState.update {
                 it.copy(muscleDialogVisible = action.show)
             }
+
+            ExerciseListAction.OnStartWorkout -> {
+                viewModelScope.launch {
+                    workoutRepository.completeOpenSessions()
+                    workoutRepository.startNewSession(
+                        exercises = _internalState.value.selectedExerciseIds.toList()
+                    )
+                }
+            }
+
+            else -> Unit
         }
     }
 
@@ -130,13 +141,6 @@ class ExerciseListViewModel(
             )
         }
     }
-
-// Function to get active session exercise IDs if resuming
-//    suspend fun getActiveSessionExerciseIds(): Set<Int> {
-//        val session = workoutRepository.getActiveSession() ?: return emptySet()
-//        val sets = workoutRepository.getSetsForSession(session.id).first()
-//        return sets.map { it.exerciseId }.toSet()
-//    }
 
     private data class InternalState(
         val searchQuery: String = "",

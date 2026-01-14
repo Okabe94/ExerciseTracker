@@ -5,10 +5,13 @@ import com.example.exercisetracker.domain.model.WorkoutSet
 import kotlinx.coroutines.flow.Flow
 
 interface IWorkoutRepository {
-    fun getActiveSessionFlow(): Flow<WorkoutSession?>
+    fun getLastActiveSessionSets(): Flow<List<WorkoutSet>>
+    fun getLastActiveSessionFlow(): Flow<WorkoutSession?>
     fun getSetsForSession(sessionId: Int): Flow<List<WorkoutSet>>
-    suspend fun completeSession(sessionId: Int)
-    suspend fun startNewSession(): WorkoutSession
-    suspend fun getActiveSession(): WorkoutSession?
-    suspend fun saveSets(sessionId: Int, sets: List<WorkoutSet>)
+    suspend fun updateSet(set: WorkoutSet)
+    suspend fun getActiveSessionId(): Int?
+    suspend fun completeOpenSessions()
+    suspend fun startNewSession(exercises: List<Int>): WorkoutSession
+    suspend fun getAllActiveSession(): List<WorkoutSession>?
+    suspend fun saveSets(sessionId: Int, exerciseId: Int, sets: List<WorkoutSet>)
 }

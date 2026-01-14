@@ -1,9 +1,10 @@
-package com.example.exercisetracker.data.local
+package com.example.exercisetracker.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 
 @Entity(
     tableName = "workout_sets",

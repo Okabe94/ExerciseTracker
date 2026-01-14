@@ -1,4 +1,4 @@
-package com.example.exercisetracker.data.local
+package com.example.exercisetracker.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -9,5 +9,6 @@ data class WorkoutSessionEntity(
     val id: Int = 0,
     val startTime: Long,
     val endTime: Long?,
+    val exercises: List<Int>,
     val isCompleted: Boolean = false
 )

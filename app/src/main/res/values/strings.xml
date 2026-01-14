@@ -2,7 +2,7 @@
     <string name="app_name">ExerciseTracker</string>
     <string name="muscles">Músculos</string>
     <string name="search">Buscar</string>
-    <string name="exercise">Ejercicio</string>
+    <string name="exercises">Ejercicios</string>
     <string name="add_muscle">Añadir músculo</string>
     <string name="muscle_name">Nombre del músculo</string>
     <string name="add_exercise">Añadir ejercicio</string>
@@ -10,4 +10,10 @@
     <string name="add">Añadir</string>
     <string name="Cancel">Cancelar</string>
     <string name="no_exercises_found">No se encontraron ejercicios para este músculo</string>
+    <string name="no_muscles_found">No se encontraron músculos</string>
+    <string name="workout">Entrenar</string>
+    <string name="resume">Reanudar</string>
+    <string name="finish">Finalizar</string>
+    <string name="weight">Peso</string>
+    <string name="reps">Repeticiones</string>
 </resources>

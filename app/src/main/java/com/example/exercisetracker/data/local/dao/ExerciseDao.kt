@@ -1,4 +1,4 @@
-package com.example.exercisetracker.data.local
+package com.example.exercisetracker.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.example.exercisetracker.data.local.entity.ExerciseEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

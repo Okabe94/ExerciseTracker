@@ -4,18 +4,28 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.exercisetracker.data.converter.IntListConverter
+import com.example.exercisetracker.data.local.dao.ExerciseDao
+import com.example.exercisetracker.data.local.dao.MuscleDao
+import com.example.exercisetracker.data.local.dao.WorkoutDao
+import com.example.exercisetracker.data.local.entity.ExerciseEntity
+import com.example.exercisetracker.data.local.entity.MuscleEntity
+import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
+import com.example.exercisetracker.data.local.entity.WorkoutSetEntity
 
 @Database(
     entities = [
-        ExerciseEntity::class, 
+        ExerciseEntity::class,
         MuscleEntity::class,
         WorkoutSessionEntity::class,
         WorkoutSetEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
+@TypeConverters(IntListConverter::class)
 abstract class ExerciseDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun muscleDao(): MuscleDao
@@ -32,7 +42,7 @@ abstract class ExerciseDatabase : RoomDatabase() {
                     klass = ExerciseDatabase::class.java,
                     name = "exercise_database"
                 )
-                    .fallbackToDestructiveMigration() // For development simplicity
+                    .fallbackToDestructiveMigration(true)
                     .addCallback(ExerciseDatabaseCallback())
                     .build()
                     .also { Instance = it }
@@ -56,9 +66,9 @@ abstract class ExerciseDatabase : RoomDatabase() {
             if (cursor.moveToFirst()) {
                 val count = cursor.getInt(0)
                 val muscles = listOf(
-                    "Chest", "Back", "Shoulders", "Biceps", "Triceps",
-                    "Quads", "Hamstrings", "Glutes", "Calves", "Abs",
-                    "Forearms", "Traps", "Lats", "Abductors", "Adductors"
+                    "Pecho", "Espalda", "Hombros", "Bíceps", "Triceps",
+                    "Cuádriceps", "Isquiotibiales", "Gluteos", "Pantorrillas", "Abdominales",
+                    "Antebrazos", "Trapecio", "Dorsal", "Abductores", "Adductores"
                 )
                 if (count < muscles.size) {
                     muscles.forEach { muscle ->

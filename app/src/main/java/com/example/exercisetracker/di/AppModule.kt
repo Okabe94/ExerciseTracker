@@ -21,13 +21,13 @@ val appModule = module {
     single { get<ExerciseDatabase>().exerciseDao() }
     single { get<ExerciseDatabase>().muscleDao() }
     single { get<ExerciseDatabase>().workoutDao() }
-    
+
     // Bind implementations to interfaces
     single<IExerciseRepository> { ExerciseRepository(get()) }
     single<IMuscleRepository> { MuscleRepository(get()) }
     single<IWorkoutRepository> { WorkoutRepository(get()) }
-    
+
     // ViewModel
     viewModel { ExerciseListViewModel(get(), get(), get()) }
-    viewModel { (exerciseIds: Set<Int>) -> WorkoutSessionViewModel(get(), get(), exerciseIds) }
+    viewModel { WorkoutSessionViewModel(get(), get()) }
 }
