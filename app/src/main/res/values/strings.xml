@@ -16,4 +16,7 @@
     <string name="finish">Finalizar</string>
     <string name="weight">Peso</string>
     <string name="reps">Repeticiones</string>
+    <string name="start">Empezar</string>
+    <string name="new_session_confirm_dialog_title">Tienes una sesión activa</string>
+    <string name="new_session_confirm_dialog_message">Empezar cerrará la sesión que tienes activa en este momento. \n\n¿Quieres empezar una nueva sesión?</string>
 </resources>

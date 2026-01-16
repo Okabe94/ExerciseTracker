@@ -7,12 +7,10 @@ import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,6 +47,7 @@ class ExerciseListViewModel(
             filteredMuscles = filteredMuscles,
             filteredExercises = filteredExercises,
             hasActiveWorkout = active != null,
+            confirmDialogVisible = internal.confirmDialogVisible,
             startWorkoutButtonVisible = internal.selectedExerciseIds.isNotEmpty(),
             selectedMuscleIds = internal.selectedMuscleIds.toList(),
             selectedExerciseIds = internal.selectedExerciseIds.toList(),
@@ -79,6 +78,7 @@ class ExerciseListViewModel(
 
             ExerciseListAction.OnStartWorkout -> {
                 viewModelScope.launch {
+                    toggleConfirmDialog(false)
                     workoutRepository.completeOpenSessions()
                     workoutRepository.startNewSession(
                         exercises = _internalState.value.selectedExerciseIds.toList()
@@ -86,8 +86,14 @@ class ExerciseListViewModel(
                 }
             }
 
+            is ExerciseListAction.OnShowConfirmDialog -> toggleConfirmDialog(action.show)
+
             else -> Unit
         }
+    }
+
+    private fun toggleConfirmDialog(show: Boolean) {
+        _internalState.update { state -> state.copy(confirmDialogVisible = show) }
     }
 
     private fun updateSearchQuery(newQuery: String) {
@@ -147,6 +153,7 @@ class ExerciseListViewModel(
         val startWorkoutButtonVisible: Boolean = false,
         val muscleDialogVisible: Boolean = false,
         val exerciseDialogVisible: Boolean = false,
+        val confirmDialogVisible: Boolean = false,
         val selectedMuscleIds: MutableSet<Int> = mutableSetOf(),
         val selectedExerciseIds: MutableSet<Int> = mutableSetOf()
     )

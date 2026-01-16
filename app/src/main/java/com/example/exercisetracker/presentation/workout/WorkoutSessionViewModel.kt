@@ -8,9 +8,11 @@ import com.example.exercisetracker.domain.model.WorkoutSet
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class WorkoutSessionViewModel(
@@ -18,11 +20,14 @@ class WorkoutSessionViewModel(
     private val workoutRepository: IWorkoutRepository,
 ) : ViewModel() {
 
+    private val expandedExerciseIds = MutableStateFlow<List<Int>>(emptyList())
+
     val state = combine(
         workoutRepository.getLastActiveSessionFlow(),
         exerciseRepository.allExercises(),
         workoutRepository.getLastActiveSessionSets(),
-    ) { sessionInfo, allExercises, sessionSets ->
+        expandedExerciseIds
+    ) { sessionInfo, allExercises, sessionSets, expanded ->
 
         val sessionExercises = allExercises.filter {
             it.id in (sessionInfo?.exercises ?: emptyList())
@@ -44,6 +49,7 @@ class WorkoutSessionViewModel(
             WorkoutSessionExercise(
                 name = it.name,
                 id = it.id,
+                expanded = it.id in expanded,
                 sets = groupedSets[it.id] ?: emptyList()
             )
         }
@@ -73,7 +79,28 @@ class WorkoutSessionViewModel(
                 weight = action.weight,
                 reps = action.reps
             )
+
+            is WorkoutSessionAction.OnExpandList -> toggleExpand(
+                exerciseId = action.exerciseId,
+            )
         }
+    }
+
+    private fun forceExpand(exerciseId: Int) {
+        val ids = expandedExerciseIds.value.toMutableList()
+        if (exerciseId in ids) return
+
+        ids.add(exerciseId)
+        expandedExerciseIds.update { ids }
+    }
+
+    private fun toggleExpand(exerciseId: Int) {
+        val ids = expandedExerciseIds.value.toMutableList()
+
+        if (exerciseId in ids) ids.remove(exerciseId)
+        else ids.add(exerciseId)
+
+        expandedExerciseIds.update { ids }
     }
 
     private fun addSet(exerciseId: Int) {
@@ -92,6 +119,7 @@ class WorkoutSessionViewModel(
             )
         }
         viewModelScope.launch {
+            forceExpand(exerciseId)
             workoutRepository.saveSets(
                 sessionId = sessionId,
                 exerciseId = exerciseId,
@@ -100,7 +128,7 @@ class WorkoutSessionViewModel(
         }
     }
 
-    fun updateSet(exerciseId: Int, setId: Int, weight: String, reps: String) {
+    private fun updateSet(exerciseId: Int, setId: Int, weight: String, reps: String) {
         val sessionId = state.value.sessionId
         val sets = state.value.listOfExercises.firstOrNull { it.id == exerciseId } ?: return
         val set = sets.sets.firstOrNull { it.id == setId } ?: return
@@ -119,7 +147,7 @@ class WorkoutSessionViewModel(
         }
     }
 
-    fun removeSet(exerciseId: Int, setId: Int) {
+    private fun removeSet(exerciseId: Int, setId: Int) {
         val sessionId = state.value.sessionId
         val exercise = state.value.listOfExercises.firstOrNull { it.id == exerciseId } ?: return
         val updatedSet = exercise.sets.filter { it.id != setId }.mapIndexed { index, set ->

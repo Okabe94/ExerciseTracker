@@ -2,6 +2,7 @@
 
 package com.example.exercisetracker.presentation.home
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
@@ -117,6 +118,15 @@ fun ExerciseListScreen(
             )
         }
 
+        if (state.confirmDialogVisible) {
+            InformativeDialog(
+                title = stringResource(R.string.new_session_confirm_dialog_title),
+                message = stringResource(R.string.new_session_confirm_dialog_message),
+                onDismiss = { onAction(ExerciseListAction.OnShowConfirmDialog(false)) },
+                onConfirm = { onAction(ExerciseListAction.OnStartWorkout) }
+            )
+        }
+
         Text(
             text = stringResource(R.string.muscles),
             style = MaterialTheme.typography.titleLargeEmphasized,
@@ -154,7 +164,7 @@ fun ExerciseListScreen(
             LazyVerticalGrid(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .weight(1f),
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -223,7 +233,9 @@ fun ExerciseListScreen(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
         ) {
@@ -233,7 +245,7 @@ fun ExerciseListScreen(
                 ) { ResumeWorkoutButton() }
             } else if (state.hasActiveWorkout) {
                 SecondaryButtonLayout(
-                    onClick = { onAction(ExerciseListAction.OnStartWorkout) }
+                    onClick = { onAction(ExerciseListAction.OnShowConfirmDialog(true)) }
                 ) { StartWorkoutButton() }
                 PrimaryButtonLayout(
                     onClick = { onAction(ExerciseListAction.OnResumeWorkout) }
@@ -384,6 +396,43 @@ private fun SelectableAnimatedItem(
 }
 
 @Composable
+private fun InformativeDialog(
+    modifier: Modifier = Modifier,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    title: String,
+    message: String,
+) {
+    AlertDialog(
+        modifier = modifier,
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLargeEmphasized
+            )
+        },
+        text = {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMediumEmphasized,
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text(stringResource(R.string.start))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.Cancel))
+            }
+        }
+    )
+}
+
+@Composable
 private fun AddNameDialog(
     title: String,
     label: String,
@@ -434,7 +483,7 @@ private fun AddMuscleButton(onClick: () -> Unit, modifier: Modifier = Modifier) 
 
     OutlinedIconButton(
         modifier = modifier
-            .size(width = 50.dp, height = 50.dp)
+            .size(width = 55.dp, height = 55.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale

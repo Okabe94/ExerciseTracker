@@ -9,6 +9,7 @@ data class ExerciseListState(
     val startWorkoutButtonVisible: Boolean = false,
     val addMuscleDialogVisible: Boolean = false,
     val addExerciseDialogVisible: Boolean = false,
+    val confirmDialogVisible: Boolean = false,
     val selectedMuscleIds: List<Int> = emptyList(),
     val selectedExerciseIds: List<Int> = emptyList(),
     val filteredMuscles: List<Muscle> = emptyList(),

@@ -8,6 +8,7 @@ data class WorkoutSessionState(
 data class WorkoutSessionExercise(
     val name: String = "",
     val id: Int = 0,
+    val expanded: Boolean = false,
     val sets: List<WorkoutSessionSet> = emptyList()
 )
 

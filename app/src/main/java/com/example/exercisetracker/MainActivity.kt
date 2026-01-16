@@ -14,7 +14,6 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.exercisetracker.presentation.home.ExerciseListRoot
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.presentation.workout.WorkoutSessionRoot
-import com.example.exercisetracker.presentation.workout.WorkoutSessionScreen
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import org.koin.androidx.compose.koinViewModel
 
