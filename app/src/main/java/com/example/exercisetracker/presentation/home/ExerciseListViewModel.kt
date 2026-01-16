@@ -30,7 +30,7 @@ class ExerciseListViewModel(
         _internalState,
         _activeWorkout,
         muscleRepository.allMuscles,
-        exerciseRepository.allExercises,
+        exerciseRepository.allExercises(),
     ) { internal, active, muscles, allExercises ->
         val filteredExercises = if (internal.selectedMuscleIds.isEmpty()) {
             allExercises

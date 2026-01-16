@@ -20,7 +20,7 @@ class WorkoutSessionViewModel(
 
     val state = combine(
         workoutRepository.getLastActiveSessionFlow(),
-        exerciseRepository.allExercises,
+        exerciseRepository.allExercises(),
         workoutRepository.getLastActiveSessionSets(),
     ) { sessionInfo, allExercises, sessionSets ->
 
@@ -83,6 +83,7 @@ class WorkoutSessionViewModel(
         val sets = exercise.sets.toMutableList().apply { add(WorkoutSessionSet()) }
         val mapped = sets.mapIndexed { index, set ->
             WorkoutSet(
+                id = set.id,
                 sessionId = sessionId,
                 exerciseId = exerciseId,
                 setNumber = index + 1,
@@ -123,6 +124,7 @@ class WorkoutSessionViewModel(
         val exercise = state.value.listOfExercises.firstOrNull { it.id == exerciseId } ?: return
         val updatedSet = exercise.sets.filter { it.id != setId }.mapIndexed { index, set ->
             WorkoutSet(
+                id = set.id,
                 sessionId = sessionId,
                 exerciseId = exercise.id,
                 setNumber = index + 1,

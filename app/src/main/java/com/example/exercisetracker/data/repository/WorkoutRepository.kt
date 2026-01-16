@@ -7,10 +7,14 @@ import com.example.exercisetracker.data.mapper.toEntity
 import com.example.exercisetracker.domain.model.WorkoutSession
 import com.example.exercisetracker.domain.model.WorkoutSet
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
+import com.example.exercisetracker.domain.time.AppClock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class WorkoutRepository(private val workoutDao: WorkoutDao) : IWorkoutRepository {
+class WorkoutRepository(
+    private val workoutDao: WorkoutDao,
+    private val clock: AppClock
+) : IWorkoutRepository {
 
     override suspend fun getAllActiveSession(): List<WorkoutSession>? {
         return workoutDao.getAllActiveSession()?.map { it.toDomain() }
@@ -30,7 +34,7 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) : IWorkoutRepository
 
     override suspend fun startNewSession(exercises: List<Int>): WorkoutSession {
         val newSession = WorkoutSessionEntity(
-            startTime = System.currentTimeMillis(),
+            startTime = clock.now(),
             endTime = null,
             exercises = exercises,
             isCompleted = false
@@ -43,7 +47,7 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) : IWorkoutRepository
         workoutDao.getAllActiveSession()?.forEach {
             workoutDao.updateSession(
                 it.copy(
-                    endTime = System.currentTimeMillis(),
+                    endTime = clock.now(),
                     isCompleted = true
                 )
             )

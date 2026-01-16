@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.map
 
 class ExerciseRepository(private val exerciseDao: ExerciseDao) : IExerciseRepository {
 
-    override val allExercises: Flow<List<Exercise>> = exerciseDao.getAllExercises()
+    override fun allExercises(): Flow<List<Exercise>> = exerciseDao.getAllExercises()
         .map { list -> list.map { it.toDomain() } }
     
     override fun getExercisesForMuscle(muscleId: Int): Flow<List<Exercise>> {
