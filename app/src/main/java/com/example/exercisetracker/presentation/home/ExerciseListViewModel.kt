@@ -36,16 +36,9 @@ class ExerciseListViewModel(
             allExercises.filter { it.targetMuscleId in internal.selectedMuscleIds }
         }
 
-        val filteredMuscles = if (internal.searchQuery.isEmpty()) {
-            muscles
-        } else {
-            muscles.filter { it.name.contains(internal.searchQuery, ignoreCase = true) }
-        }
-
         ExerciseListState(
-            searchQuery = internal.searchQuery,
-            filteredMuscles = filteredMuscles,
-            filteredExercises = filteredExercises,
+            muscleList = muscles,
+            exerciseList = filteredExercises,
             hasActiveWorkout = active != null,
             confirmDialogVisible = internal.confirmDialogVisible,
             startWorkoutButtonVisible = internal.selectedExerciseIds.isNotEmpty(),
@@ -66,7 +59,6 @@ class ExerciseListViewModel(
             is ExerciseListAction.OnAddExercise -> addExercise(action.name)
             is ExerciseListAction.OnMuscleSelected -> toggleMuscleSelection(action.muscleId)
             is ExerciseListAction.OnExerciseSelected -> toggleExerciseSelection(action.exerciseId)
-            is ExerciseListAction.OnSearchQueryChange -> updateSearchQuery(action.query)
 
             is ExerciseListAction.OnShowExerciseDialog -> _internalState.update {
                 it.copy(exerciseDialogVisible = action.show)
@@ -94,10 +86,6 @@ class ExerciseListViewModel(
 
     private fun toggleConfirmDialog(show: Boolean) {
         _internalState.update { state -> state.copy(confirmDialogVisible = show) }
-    }
-
-    private fun updateSearchQuery(newQuery: String) {
-        _internalState.update { state -> state.copy(searchQuery = newQuery) }
     }
 
     private fun toggleMuscleSelection(muscleId: Int) {
@@ -149,7 +137,6 @@ class ExerciseListViewModel(
     }
 
     private data class InternalState(
-        val searchQuery: String = "",
         val startWorkoutButtonVisible: Boolean = false,
         val muscleDialogVisible: Boolean = false,
         val exerciseDialogVisible: Boolean = false,

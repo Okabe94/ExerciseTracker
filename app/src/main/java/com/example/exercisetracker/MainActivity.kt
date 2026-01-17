@@ -5,14 +5,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.presentation.home.ExerciseListRoot
+import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
+import com.example.exercisetracker.presentation.navigation.TOP_LEVEL_DESTINATION
+import com.example.exercisetracker.presentation.navigation.appNavigationBar
+import com.example.exercisetracker.presentation.navigation.rememberNavigationState
+import com.example.exercisetracker.presentation.navigation.toEntries
 import com.example.exercisetracker.presentation.workout.WorkoutSessionRoot
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import org.koin.androidx.compose.koinViewModel
@@ -23,31 +32,60 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val adaptiveInfo  = currentWindowAdaptiveInfo()
+            val layoutType = with(adaptiveInfo){
+                if (windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND)){
+                    NavigationSuiteType.NavigationRail
+                } else {
+                    NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(this)
+                }
+            }
+            val navigationState = rememberNavigationState(
+                startRoute = Route.Home,
+                topLevelRoutes = TOP_LEVEL_DESTINATION.keys
+            )
+
+            val navigator = remember {
+                Navigator(navigationState)
+            }
+
             ExerciseTrackerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val backStack = rememberNavBackStack(Route.Home)
+                NavigationSuiteScaffold(
+                    layoutType = layoutType,
+                    modifier = Modifier.fillMaxSize(),
+                    navigationSuiteItems = {
+                        appNavigationBar(
+                            selectedKey = navigationState.topLevelRoute,
+                            onSelectKey = { navigator.navigate(it) }
+                        )
+                    },
+                ) {
                     NavDisplay(
-                        modifier = Modifier.padding(innerPadding),
-                        backStack = backStack,
-                        entryProvider = { key ->
-                            when (key) {
-                                is Route.Home -> NavEntry(key) {
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = { navigator.goBack() },
+                        entries = navigationState.toEntries(
+                            entryProvider = entryProvider {
+                                entry<Route.Home> {
                                     ExerciseListRoot(
-                                        backStack = backStack,
+                                        navigator = navigator,
                                         viewModel = koinViewModel()
                                     )
                                 }
 
-                                is Route.Workout -> NavEntry(key) {
+                                entry<Route.Workout> {
                                     WorkoutSessionRoot(
-                                        backStack = backStack,
+                                        navigator = navigator,
                                         viewModel = koinViewModel()
                                     )
                                 }
-
-                                else -> error("Unknown navkey")
+                                entry<Route.Progress> {
+                                    ExerciseListRoot(
+                                        navigator = navigator,
+                                        viewModel = koinViewModel()
+                                    )
+                                }
                             }
-                        }
+                        )
                     )
                 }
             }

@@ -2,7 +2,6 @@
 
 package com.example.exercisetracker.presentation.home
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,14 +36,18 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -62,9 +66,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.AndroidUiModes.UI_MODE_NIGHT_YES
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation3.runtime.NavBackStack
-import androidx.navigation3.runtime.NavKey
+import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.R
+import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import kotlinx.coroutines.launch
@@ -72,7 +76,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ExerciseListRoot(
-    backStack: NavBackStack<NavKey>,
+    navigator: Navigator,
     viewModel: ExerciseListViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -82,7 +86,7 @@ fun ExerciseListRoot(
             viewModel.onAction(it)
             when (it) {
                 is ExerciseListAction.OnStartWorkout,
-                is ExerciseListAction.OnResumeWorkout -> backStack.add(Route.Workout)
+                is ExerciseListAction.OnResumeWorkout -> navigator.navigate(Route.Workout)
 
                 else -> Unit
             }
@@ -95,102 +99,141 @@ fun ExerciseListScreen(
     onAction: (ExerciseListAction) -> Unit,
     state: ExerciseListState,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        if (state.addExerciseDialogVisible) {
-            AddNameDialog(
-                title = stringResource(R.string.add_exercise),
-                label = stringResource(R.string.exercise_name),
-                onDismiss = { onAction(ExerciseListAction.OnShowExerciseDialog(false)) },
-                onConfirm = { name -> onAction(ExerciseListAction.OnAddExercise(name)) }
-            )
-        }
-
-        if (state.addMuscleDialogVisible) {
-            AddNameDialog(
-                title = stringResource(R.string.add_muscle),
-                label = stringResource(R.string.muscle_name),
-                onDismiss = { onAction(ExerciseListAction.OnShowMuscleDialog(false)) },
-                onConfirm = { name -> onAction(ExerciseListAction.OnAddMuscle(name)) }
-            )
-        }
-
-        if (state.confirmDialogVisible) {
-            InformativeDialog(
-                title = stringResource(R.string.new_session_confirm_dialog_title),
-                message = stringResource(R.string.new_session_confirm_dialog_message),
-                onDismiss = { onAction(ExerciseListAction.OnShowConfirmDialog(false)) },
-                onConfirm = { onAction(ExerciseListAction.OnStartWorkout) }
-            )
-        }
-
-        Text(
-            text = stringResource(R.string.muscles),
-            style = MaterialTheme.typography.titleLargeEmphasized,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Row(
+    Scaffold(
+        modifier = Modifier.padding(16.dp),
+        bottomBar = { ActionsSection(onAction = onAction, state = state) }
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(bottom = 16.dp)
         ) {
-            OutlinedTextField(
-                value = state.searchQuery,
-                shape = MaterialTheme.shapes.medium,
-                onValueChange = { onAction(ExerciseListAction.OnSearchQueryChange(it)) },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text(stringResource(R.string.search)) },
-                singleLine = true
-            )
+            if (state.addExerciseDialogVisible) {
+                AddNameDialog(
+                    title = stringResource(R.string.add_exercise),
+                    label = stringResource(R.string.exercise_name),
+                    onDismiss = { onAction(ExerciseListAction.OnShowExerciseDialog(false)) },
+                    onConfirm = { name -> onAction(ExerciseListAction.OnAddExercise(name)) }
+                )
+            }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            if (state.addMuscleDialogVisible) {
+                AddNameDialog(
+                    title = stringResource(R.string.add_muscle),
+                    label = stringResource(R.string.muscle_name),
+                    onDismiss = { onAction(ExerciseListAction.OnShowMuscleDialog(false)) },
+                    onConfirm = { name -> onAction(ExerciseListAction.OnAddMuscle(name)) }
+                )
+            }
 
-            AddMuscleButton(
-                onClick = { onAction(ExerciseListAction.OnShowMuscleDialog(true)) }
-            )
+            if (state.confirmDialogVisible) {
+                InformativeDialog(
+                    title = stringResource(R.string.new_session_confirm_dialog_title),
+                    message = stringResource(R.string.new_session_confirm_dialog_message),
+                    onDismiss = { onAction(ExerciseListAction.OnShowConfirmDialog(false)) },
+                    onConfirm = { onAction(ExerciseListAction.OnStartWorkout) }
+                )
+            }
 
-        }
+            val adaptiveInfo = currentWindowAdaptiveInfo()
+            if (adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    MuscleSection(
+                        modifier = Modifier.weight(1f),
+                        onAction = onAction,
+                        state = state
+                    )
 
-        if (state.filteredMuscles.isEmpty()) {
-            EmptyMuscles()
-        } else {
-            LazyVerticalGrid(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(
-                    items = state.filteredMuscles,
-                    key = { it.id }
-                ) { muscle ->
-                    SelectableAnimatedItem(
-                        name = muscle.name,
-                        isSelected = state.selectedMuscleIds.contains(muscle.id),
-                        onSelect = { onAction(ExerciseListAction.OnMuscleSelected(muscle.id)) }
+                    VerticalDivider(modifier = Modifier.fillMaxHeight())
+
+                    ExerciseSection(
+                        modifier = Modifier.weight(1f),
+                        onAction = onAction,
+                        state = state
+                    )
+                }
+            } else {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    MuscleSection(
+                        modifier = Modifier.weight(1f),
+                        onAction = onAction,
+                        state = state
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ExerciseSection(
+                        modifier = Modifier.weight(1f),
+                        onAction = onAction,
+                        state = state
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+@Composable
+private fun MuscleSection(
+    modifier: Modifier = Modifier,
+    onAction: (ExerciseListAction) -> Unit,
+    state: ExerciseListState
+) {
+    Section(
+        modifier = modifier,
+        key = { it.id },
+        isEmpty = state.muscleList.isEmpty(),
+        itemList = state.muscleList,
+        emptySection = {
+            EmptySection(text = stringResource(R.string.no_muscles_found))
+        },
+        titleSection = {
+            Text(
+                text = stringResource(R.string.muscles),
+                style = MaterialTheme.typography.titleLargeEmphasized,
+                fontWeight = FontWeight.Bold
+            )
+
+            TextButton(
+                modifier = Modifier.padding(0.dp),
+                contentPadding = PaddingValues(0.dp),
+                onClick = { onAction(ExerciseListAction.OnShowExerciseDialog(true)) }
+            ) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    text = stringResource(R.string.add_muscle)
+                )
+            }
+        }
+    ) {
+        SelectableAnimatedItem(
+            name = it.name,
+            isSelected = state.selectedMuscleIds.contains(it.id),
+            onSelect = { onAction(ExerciseListAction.OnMuscleSelected(it.id)) }
+        )
+    }
+}
+
+@Composable
+private fun ExerciseSection(
+    modifier: Modifier = Modifier,
+    onAction: (ExerciseListAction) -> Unit,
+    state: ExerciseListState
+) {
+    Section(
+        modifier = modifier,
+        key = { it.id },
+        isEmpty = state.exerciseList.isEmpty(),
+        itemList = state.exerciseList,
+        emptySection = {
+            EmptySection(text = stringResource(R.string.no_exercises_found))
+        },
+        titleSection = {
             Text(
                 text = stringResource(R.string.exercises),
                 style = MaterialTheme.typography.titleLargeEmphasized,
@@ -203,58 +246,89 @@ fun ExerciseListScreen(
                     contentPadding = PaddingValues(0.dp),
                     onClick = { onAction(ExerciseListAction.OnShowExerciseDialog(true)) }
                 ) {
-                    Text(stringResource(R.string.add_exercise))
-                }
-            }
-        }
-
-        if (state.filteredExercises.isEmpty()) {
-            EmptyExercises()
-        } else {
-            LazyVerticalGrid(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(
-                    items = state.filteredExercises,
-                    key = { it.id }
-                ) { exercise ->
-                    SelectableAnimatedItem(
-                        name = exercise.name,
-                        isSelected = state.selectedExerciseIds.contains(exercise.id),
-                        onSelect = { onAction(ExerciseListAction.OnExerciseSelected(exercise.id)) }
+                    Text(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        text = stringResource(R.string.add_exercise)
                     )
                 }
             }
         }
+    ) {
+        SelectableAnimatedItem(
+            name = it.name,
+            isSelected = state.selectedExerciseIds.contains(it.id),
+            onSelect = { onAction(ExerciseListAction.OnExerciseSelected(it.id)) }
+        )
+    }
+}
 
+@Composable
+private fun <T> Section(
+    modifier: Modifier = Modifier,
+    isEmpty: Boolean,
+    titleSection: @Composable () -> Unit,
+    emptySection: @Composable ColumnScope.() -> Unit,
+    itemList: List<T>,
+    key: (T) -> Any,
+    itemContent: @Composable (T) -> Unit
+) {
+    Column(modifier = modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                .height(40.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (state.hasActiveWorkout && state.selectedExerciseIds.isEmpty()) {
-                PrimaryButtonLayout(
-                    onClick = { onAction(ExerciseListAction.OnResumeWorkout) }
-                ) { ResumeWorkoutButton() }
-            } else if (state.hasActiveWorkout) {
-                SecondaryButtonLayout(
-                    onClick = { onAction(ExerciseListAction.OnShowConfirmDialog(true)) }
-                ) { StartWorkoutButton() }
-                PrimaryButtonLayout(
-                    onClick = { onAction(ExerciseListAction.OnResumeWorkout) }
-                ) { ResumeWorkoutButton() }
-            } else if (state.selectedExerciseIds.isNotEmpty()) {
-                PrimaryButtonLayout(
-                    onClick = { onAction(ExerciseListAction.OnStartWorkout) }
-                ) { StartWorkoutButton() }
+            titleSection()
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        if (isEmpty) {
+            emptySection()
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(150.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(
+                    items = itemList,
+                    key = { key(it) }
+                ) { data -> itemContent(data) }
             }
+        }
+    }
+}
+
+@Composable
+private fun ActionsSection(
+    modifier: Modifier = Modifier,
+    onAction: (ExerciseListAction) -> Unit,
+    state: ExerciseListState
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+    ) {
+        if (state.hasActiveWorkout && state.selectedExerciseIds.isEmpty()) {
+            PrimaryButtonLayout(
+                onClick = { onAction(ExerciseListAction.OnResumeWorkout) }
+            ) { ResumeWorkoutButton() }
+        } else if (state.hasActiveWorkout) {
+            SecondaryButtonLayout(
+                onClick = { onAction(ExerciseListAction.OnShowConfirmDialog(true)) }
+            ) { StartWorkoutButton() }
+            PrimaryButtonLayout(
+                onClick = { onAction(ExerciseListAction.OnResumeWorkout) }
+            ) { ResumeWorkoutButton() }
+        } else if (state.selectedExerciseIds.isNotEmpty()) {
+            PrimaryButtonLayout(
+                onClick = { onAction(ExerciseListAction.OnStartWorkout) }
+            ) { StartWorkoutButton() }
         }
     }
 }
@@ -317,24 +391,7 @@ private fun StartWorkoutButton() {
 }
 
 @Composable
-fun EmptyMuscles(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = stringResource(R.string.no_muscles_found),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun ColumnScope.EmptyExercises(modifier: Modifier = Modifier) {
+private fun ColumnScope.EmptySection(modifier: Modifier = Modifier, text: String) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -343,7 +400,7 @@ private fun ColumnScope.EmptyExercises(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = stringResource(R.string.no_exercises_found),
+            text = text,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -469,34 +526,6 @@ private fun AddNameDialog(
             }
         }
     )
-}
-
-@Composable
-private fun AddMuscleButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val iSource = remember { MutableInteractionSource() }
-    val isPressed by iSource.collectIsPressedAsState()
-
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.9f else 1f,
-        label = "pressAnimation"
-    )
-
-    OutlinedIconButton(
-        modifier = modifier
-            .size(width = 55.dp, height = 55.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        shape = MaterialTheme.shapes.medium,
-        interactionSource = iSource,
-        onClick = onClick,
-    ) {
-        Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.outline_add_24),
-            contentDescription = "add"
-        )
-    }
 }
 
 private suspend fun animateUncheck(anim: Animatable<Float, AnimationVector1D>) {

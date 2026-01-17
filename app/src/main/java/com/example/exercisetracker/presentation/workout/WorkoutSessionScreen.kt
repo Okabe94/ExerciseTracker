@@ -51,13 +51,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import com.example.exercisetracker.R
+import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import java.util.Locale
 import java.util.Locale.getDefault
 
 @Composable
 fun WorkoutSessionRoot(
-    backStack: NavBackStack<NavKey>,
+    navigator: Navigator,
     viewModel: WorkoutSessionViewModel
 ) {
     val state by viewModel.state.collectAsState()
@@ -67,7 +68,7 @@ fun WorkoutSessionRoot(
             viewModel.onAction(it)
 
             when (it) {
-                WorkoutSessionAction.OnFinishWorkout -> backStack.removeAt(backStack.lastIndex)
+                WorkoutSessionAction.OnFinishWorkout -> navigator.goBack()
                 else -> Unit
             }
         },
