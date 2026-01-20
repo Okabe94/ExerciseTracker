@@ -16,9 +16,15 @@
     <string name="finish">Finalizar</string>
     <string name="weight">Peso</string>
     <string name="reps">Repeticiones</string>
+    <string name="reps_small">Reps</string>
     <string name="start">Empezar</string>
     <string name="new_session_confirm_dialog_title">Tienes una sesión activa</string>
     <string name="new_session_confirm_dialog_message">Empezar cerrará la sesión que tienes activa en este momento. \n\n¿Quieres empezar una nueva sesión?</string>
     <string name="metrics">Métricas</string>
     <string name="training">Entrenamiento</string>
+    <string name="one_month">1 Mes</string>
+    <string name="three_months">3 Meses</string>
+    <string name="six_months">6 Meses</string>
+    <string name="one_year">1 Año</string>
+    <string name="historic">Histórico</string>
 </resources>

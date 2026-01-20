@@ -13,5 +13,5 @@ sealed interface Route : NavKey {
     data object Workout : Route, NavKey
 
     @Serializable
-    data object Progress : Route, NavKey
+    data object Metrics : Route, NavKey
 }

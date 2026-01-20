@@ -10,6 +10,7 @@ import com.example.exercisetracker.domain.repository.IMuscleRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import com.example.exercisetracker.domain.time.AppClock
 import com.example.exercisetracker.presentation.home.ExerciseListViewModel
+import com.example.exercisetracker.presentation.metrics.MetricsViewModel
 import com.example.exercisetracker.presentation.workout.WorkoutSessionViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -34,4 +35,5 @@ val appModule = module {
     // ViewModel
     viewModel { ExerciseListViewModel(get(), get(), get()) }
     viewModel { WorkoutSessionViewModel(get(), get()) }
+    viewModel { MetricsViewModel() }
 }

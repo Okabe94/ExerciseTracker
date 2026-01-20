@@ -19,7 +19,7 @@ val TOP_LEVEL_DESTINATION = mapOf(
         icon = R.drawable.outline_exercise_24,
         title = R.string.training
     ),
-    Route.Progress to BottomNavItem(
+    Route.Metrics to BottomNavItem(
         icon = R.drawable.outline_bar_chart_24,
         title = R.string.metrics
     )

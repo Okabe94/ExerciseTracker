@@ -5,8 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
@@ -16,6 +17,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.presentation.home.ExerciseListRoot
+import com.example.exercisetracker.presentation.metrics.MetricsRoot
 import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.presentation.navigation.TOP_LEVEL_DESTINATION
@@ -32,16 +34,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val adaptiveInfo  = currentWindowAdaptiveInfo()
-            val layoutType = with(adaptiveInfo){
-                if (windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND)){
+            val adaptiveInfo = currentWindowAdaptiveInfo()
+            val layoutType = with(adaptiveInfo) {
+                if (windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND)) {
                     NavigationSuiteType.NavigationRail
                 } else {
                     NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(this)
                 }
             }
             val navigationState = rememberNavigationState(
-                startRoute = Route.Home,
+                startRoute = Route.Metrics,
                 topLevelRoutes = TOP_LEVEL_DESTINATION.keys
             )
 
@@ -50,43 +52,44 @@ class MainActivity : ComponentActivity() {
             }
 
             ExerciseTrackerTheme {
-                NavigationSuiteScaffold(
-                    layoutType = layoutType,
-                    modifier = Modifier.fillMaxSize(),
-                    navigationSuiteItems = {
-                        appNavigationBar(
-                            selectedKey = navigationState.topLevelRoute,
-                            onSelectKey = { navigator.navigate(it) }
-                        )
-                    },
-                ) {
-                    NavDisplay(
-                        modifier = Modifier.fillMaxSize(),
-                        onBack = { navigator.goBack() },
-                        entries = navigationState.toEntries(
-                            entryProvider = entryProvider {
-                                entry<Route.Home> {
-                                    ExerciseListRoot(
-                                        navigator = navigator,
-                                        viewModel = koinViewModel()
-                                    )
-                                }
+                Scaffold(modifier = Modifier.fillMaxSize()) { paddingValues ->
+                    NavigationSuiteScaffold(
+                        layoutType = layoutType,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        navigationSuiteItems = {
+                            appNavigationBar(
+                                selectedKey = navigationState.topLevelRoute,
+                                onSelectKey = { navigator.navigate(it) }
+                            )
+                        },
+                    ) {
+                        NavDisplay(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { navigator.goBack() },
+                            entries = navigationState.toEntries(
+                                entryProvider = entryProvider {
+                                    entry<Route.Home> {
+                                        ExerciseListRoot(
+                                            navigator = navigator,
+                                            viewModel = koinViewModel()
+                                        )
+                                    }
 
-                                entry<Route.Workout> {
-                                    WorkoutSessionRoot(
-                                        navigator = navigator,
-                                        viewModel = koinViewModel()
-                                    )
+                                    entry<Route.Workout> {
+                                        WorkoutSessionRoot(
+                                            navigator = navigator,
+                                            viewModel = koinViewModel()
+                                        )
+                                    }
+                                    entry<Route.Metrics> {
+                                        MetricsRoot(viewModel = koinViewModel())
+                                    }
                                 }
-                                entry<Route.Progress> {
-                                    ExerciseListRoot(
-                                        navigator = navigator,
-                                        viewModel = koinViewModel()
-                                    )
-                                }
-                            }
+                            )
                         )
-                    )
+                    }
                 }
             }
         }

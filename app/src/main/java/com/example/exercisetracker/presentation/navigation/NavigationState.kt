@@ -20,7 +20,6 @@ import androidx.savedstate.serialization.SavedStateConfiguration
 import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.serializer
 
 class NavigationState(
     val startRoute: NavKey,
@@ -89,7 +88,7 @@ private val serializersConfig = SavedStateConfiguration {
     serializersModule = SerializersModule {
         polymorphic(NavKey::class) {
             subclass(Route.Home::class, Route.Home.serializer())
-            subclass(Route.Progress::class, Route.Progress.serializer())
+            subclass(Route.Metrics::class, Route.Metrics.serializer())
             subclass(Route.Workout::class, Route.Workout.serializer())
         }
     }
