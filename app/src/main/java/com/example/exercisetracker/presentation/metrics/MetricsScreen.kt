@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class)
 
 package com.example.exercisetracker.presentation.metrics
 
@@ -8,7 +8,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,8 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -40,8 +39,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,18 +52,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import co.yml.charts.axis.AxisData
 import co.yml.charts.common.extensions.formatToSinglePrecision
-import co.yml.charts.common.model.PlotType
 import co.yml.charts.common.model.Point
 import co.yml.charts.ui.linechart.LineChart
 import co.yml.charts.ui.linechart.model.GridLines
@@ -78,9 +70,6 @@ import co.yml.charts.ui.linechart.model.LineStyle
 import co.yml.charts.ui.linechart.model.SelectionHighlightPoint
 import co.yml.charts.ui.linechart.model.SelectionHighlightPopUp
 import co.yml.charts.ui.linechart.model.ShadowUnderLine
-import co.yml.charts.ui.piechart.charts.PieChart
-import co.yml.charts.ui.piechart.models.PieChartConfig
-import co.yml.charts.ui.piechart.models.PieChartData
 import com.example.exercisetracker.R
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 
@@ -104,7 +93,6 @@ fun MetricsScreen(
     Scaffold(
         topBar = {
             WorkoutWeekCalendar(setOf(1, 4, 5), 7)
-//            DaySection()
         }
     ) {
         LazyColumn(
@@ -120,7 +108,6 @@ fun MetricsScreen(
                     listOf("Espalda", "Pecho", "Brazo", "Triceps"),
                     listOf("Rows", "Raise", "Calf", "Push up", "Pull up")
                 )
-//                SelectMuscleSection()
             }
             item {
                 ExerciseSummaryCard("Rows", 200.0, 150.0, 180.2, "kg")
@@ -137,9 +124,9 @@ fun MetricsScreen(
 }
 
 @Composable
-fun WorkoutWeekCalendar(
-    workoutDays: Set<Int>, // e.g., Set of 1 (Monday), 3 (Wednesday)...
-    currentDay: Int = 3    // Wednesday
+private fun WorkoutWeekCalendar(
+    workoutDays: Set<Int>,
+    currentDay: Int
 ) {
     val days = listOf("M", "T", "W", "T", "F", "S", "S")
 
@@ -149,7 +136,7 @@ fun WorkoutWeekCalendar(
             .padding(16.dp)
     ) {
         Text(
-            text = "Activity This Week",
+            text = stringResource(R.string.activity_this_week),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -176,7 +163,7 @@ fun WorkoutWeekCalendar(
 }
 
 @Composable
-fun DayNode(dayName: String, isWorkoutDone: Boolean, isToday: Boolean) {
+private fun DayNode(dayName: String, isWorkoutDone: Boolean, isToday: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
@@ -191,7 +178,9 @@ fun DayNode(dayName: String, isWorkoutDone: Boolean, isToday: Boolean) {
                 )
                 .border(
                     width = if (isToday) 2.dp else 0.dp,
-                    color = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    color =
+                        if (isToday) MaterialTheme.colorScheme.primary
+                        else Color.Transparent,
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -207,103 +196,21 @@ fun DayNode(dayName: String, isWorkoutDone: Boolean, isToday: Boolean) {
                 Text(
                     text = dayName,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color =
+                        if (isToday) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GraphMetricToggle(
-    selectedMetric: Int,
-    onMetricSelected: (Int) -> Unit
-) {
-    val options = listOf("Weight", "Reps")
-    val icons = listOf(
-        ImageVector.vectorResource(R.drawable.outline_scale_24),
-        ImageVector.vectorResource(R.drawable.outline_repeat_24)
-    )
-
-    SingleChoiceSegmentedButtonRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
-        options.forEachIndexed { index, label ->
-            SegmentedButton(
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                onClick = { onMetricSelected(index) },
-                selected = index == selectedMetric,
-                icon = {
-                    SegmentedButtonDefaults.Icon(active = index == selectedMetric) {
-                        Icon(
-                            imageVector = icons[index],
-                            contentDescription = null,
-                            modifier = Modifier.size(SegmentedButtonDefaults.IconSize)
-                        )
-                    }
-                }
-            ) {
-                Text(label, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-}
-
-@Composable
-fun Test(modifier: Modifier = Modifier) {
-    val options = listOf(stringResource(R.string.reps), stringResource(R.string.weight))
-    val unCheckedIcons = listOf(
-        ImageVector.vectorResource(R.drawable.outline_check_24),
-        ImageVector.vectorResource(R.drawable.outline_check_24),
-    )
-    val checkedIcons = listOf(
-        ImageVector.vectorResource(R.drawable.outline_check_24),
-        ImageVector.vectorResource(R.drawable.outline_check_24),
-    )
-    var selectedIndex by remember { mutableIntStateOf(0) }
-
-    Row(
-        Modifier.padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-    ) {
-        val modifiers = listOf(
-            Modifier.weight(1f),
-            Modifier.weight(1f)
-        )
-
-        options.forEachIndexed { index, label ->
-            ToggleButton(
-                checked = selectedIndex == index,
-                onCheckedChange = { selectedIndex = index },
-                modifier = modifiers[index].semantics { role = Role.RadioButton },
-                shapes =
-                    when (index) {
-                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                        options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                    },
-            ) {
-                Icon(
-                    if (selectedIndex == index) checkedIcons[index] else unCheckedIcons[index],
-                    contentDescription = "Localized description",
-                )
-                Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
-                Text(label)
-            }
-        }
-    }
-}
-
-@Composable
-fun ExerciseSelectorHeader(
+private fun ExerciseSelectorHeader(
     selectedExercise: String,
     onExerciseSelected: (String) -> Unit,
     muscleGroups: List<String>,
-    exerciseList: List<String> // This should be filtered based on the selected muscle group
+    exerciseList: List<String>
 ) {
     var expanded by remember { mutableStateOf(false) }
     var selectedMuscleGroup by remember { mutableStateOf("All") }
@@ -314,14 +221,13 @@ fun ExerciseSelectorHeader(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Text(
-            text = "Select Exercise",
+            text = stringResource(R.string.select_exercise),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 1. Muscle Group Filter Chips
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
@@ -337,16 +243,15 @@ fun ExerciseSelectorHeader(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 2. Searchable Dropdown
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
         ) {
             OutlinedTextField(
                 value = selectedExercise,
-                onValueChange = {}, // Read-only or add search logic here
+                onValueChange = {},
                 readOnly = true,
-                placeholder = { Text("Choose an exercise...") },
+                placeholder = { Text(stringResource(R.string.choose_an_exercise)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                 modifier = Modifier
@@ -374,12 +279,12 @@ fun ExerciseSelectorHeader(
 }
 
 @Composable
-fun ExerciseSummaryCard(
+private fun ExerciseSummaryCard(
     exerciseName: String,
     totalVolume: Double,
     maxWeight: Double,
     estimated1RM: Double,
-    unit: String = "lbs"
+    unit: String
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -392,7 +297,6 @@ fun ExerciseSummaryCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Header: Exercise Name
             Text(
                 text = exerciseName,
                 style = MaterialTheme.typography.titleLarge,
@@ -406,25 +310,24 @@ fun ExerciseSummaryCard(
                 color = MaterialTheme.colorScheme.outline
             )
 
-            // Metrics Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(
-                    label = "Total Volume",
+                    label = stringResource(R.string.total_volume),
                     value = "$totalVolume",
                     unit = unit,
                     Modifier.weight(1f)
                 )
                 StatItem(
-                    label = "Max Weight",
+                    label = stringResource(R.string.max_weight),
                     value = "$maxWeight",
                     unit = unit,
                     Modifier.weight(1f)
                 )
                 StatItem(
-                    label = "Est. 1RM",
+                    label = stringResource(R.string.est_1rm),
                     value = "$estimated1RM",
                     unit = unit,
                     Modifier.weight(1f)
@@ -435,7 +338,7 @@ fun ExerciseSummaryCard(
 }
 
 @Composable
-fun StatItem(
+private fun StatItem(
     label: String,
     value: String,
     unit: String,
@@ -468,116 +371,64 @@ fun StatItem(
 }
 
 @Composable
-fun FilterSection(modifier: Modifier = Modifier) {
-    val filters = mapOf(
-        R.string.one_month to false,
-        R.string.three_months to false,
-        R.string.six_months to true,
-        R.string.one_year to false,
-        R.string.historic to false,
+private fun FilterSection(modifier: Modifier = Modifier) {
+    val selected by remember { mutableIntStateOf(0) }
+    val filters = listOf(
+        R.string.one_month,
+        R.string.three_months,
+        R.string.six_months,
+        R.string.one_year,
+        R.string.historic,
     )
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
     ) {
-        items(filters.toList()) {
+        itemsIndexed(filters) { index, item ->
             FilterChip(
-                selected = it.second,
-                onClick = {},
-                label = { Text(stringResource(it.first)) },
-                trailingIcon = {
-                    if (it.second) {
-                        Icon(
-                            ImageVector.vectorResource(R.drawable.outline_check_24),
-                            null
-                        )
-                    }
-                },
+                selected = index == selected,
+                onClick = { index == selected },
+                label = { Text(stringResource(item)) },
             )
         }
     }
 }
 
 @Composable
-fun SelectMuscleSection(modifier: Modifier = Modifier) {
-    Row(
+private fun GraphMetricToggle(
+    selectedMetric: Int,
+    onMetricSelected: (Int) -> Unit
+) {
+    val options = listOf(stringResource(R.string.reps), stringResource(R.string.weight))
+    val icons = listOf(
+        ImageVector.vectorResource(R.drawable.outline_scale_24),
+        ImageVector.vectorResource(R.drawable.outline_repeat_24)
+    )
+
+    SingleChoiceSegmentedButtonRow(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color = MaterialTheme.colorScheme.surfaceVariant)
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.Center
+            .padding(vertical = 8.dp)
     ) {
-        Text("Ejercicio")
-        Icon(
-            ImageVector.vectorResource(R.drawable.outline_arrow_drop_down_24),
-            null
-        )
-    }
-}
-
-@Composable
-fun DaySection(modifier: Modifier = Modifier) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp)
-    ) {
-        Text(
-            text = "Entrenos semanales",
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelSmall
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        val days = listOf("L", "M", "X", "J", "V", "S", "D")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            days.forEach {
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .background(color = Color.Red, shape = CircleShape)
-                            .size(4.dp)
-                            .align(Alignment.BottomCenter),
-                    )
-                    Text(it)
+        options.forEachIndexed { index, label ->
+            SegmentedButton(
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                onClick = { onMetricSelected(index) },
+                selected = index == selectedMetric,
+                icon = {
+                    SegmentedButtonDefaults.Icon(active = index == selectedMetric) {
+                        Icon(
+                            imageVector = icons[index],
+                            contentDescription = null,
+                            modifier = Modifier.size(SegmentedButtonDefaults.IconSize)
+                        )
+                    }
                 }
+            ) {
+                Text(label, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
-}
-
-@Composable
-private fun PieChartSection() {
-    val chartData = PieChartData(
-        listOf(
-            PieChartData.Slice(
-                label = "Label",
-                value = 30f,
-                color = Color.Blue
-            ),
-            PieChartData.Slice(
-                label = "Label",
-                value = 10f,
-                color = Color.Black
-            ),
-            PieChartData.Slice(
-                label = "Label",
-                value = 20f,
-                color = Color.Red
-            )
-        ), PlotType.Pie
-    )
-    val chartConfig = PieChartConfig()
-    PieChart(
-        modifier = Modifier.fillMaxSize(),
-        pieChartData = chartData,
-        pieChartConfig = chartConfig
-    )
 }
 
 @Composable
@@ -585,8 +436,8 @@ private fun Graph(modifier: Modifier = Modifier) {
     val pointsData: List<Point> = listOf(
         Point(x = 0f, y = 40f),
         Point(1f, 90f),
-        Point(2f, 0f),
-        Point(3f, 60f),
+        Point(1f, 0f),
+        Point(0f, 60f),
         Point(4f, 10f)
     )
     val xAxisData = AxisData.Builder()
@@ -594,7 +445,7 @@ private fun Graph(modifier: Modifier = Modifier) {
         .backgroundColor(MaterialTheme.colorScheme.surfaceVariant)
         .axisLabelColor(MaterialTheme.colorScheme.onSurfaceVariant)
         .steps(pointsData.size - 1)
-        .labelData { i -> i.toString() }
+        .labelData { i -> pointsData[i].description}
         .labelAndAxisLinePadding(15.dp)
         .build()
 
@@ -631,20 +482,9 @@ private fun Graph(modifier: Modifier = Modifier) {
     )
 
     LineChart(
-        modifier = Modifier.height(300.dp),
+        modifier = modifier.height(300.dp),
         lineChartData = lineChartData
     )
-
-}
-
-@Composable
-private fun RepsSection(modifier: Modifier = Modifier) {
-
-}
-
-@Composable
-private fun WeightPerSessionSection(modifier: Modifier = Modifier) {
-
 }
 
 @Preview(uiMode = UI_MODE_NIGHT_YES)
