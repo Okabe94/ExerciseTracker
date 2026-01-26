@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val navigationState = rememberNavigationState(
-                startRoute = Route.Metrics,
+                startRoute = Route.Home,
                 topLevelRoutes = TOP_LEVEL_DESTINATION.keys
             )
 

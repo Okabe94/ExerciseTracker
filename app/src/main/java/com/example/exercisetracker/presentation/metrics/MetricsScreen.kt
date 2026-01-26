@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -72,6 +73,7 @@ import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.example.exercisetracker.ui.theme.Orange500
 import java.util.Locale
+import java.util.Locale.getDefault
 
 @Composable
 fun MetricsRoot(
@@ -102,7 +104,8 @@ fun MetricsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(it)
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top)
         ) {
             item {
                 ExerciseSelectorHeader(
@@ -122,6 +125,7 @@ fun MetricsScreen(
                     expanded = state.expandedExerciseSelection
                 )
             }
+
             item {
                 ExerciseSummaryCard(
                     exerciseName = state.selectedExercise,
@@ -130,19 +134,25 @@ fun MetricsScreen(
                     estimated1RM = state.rm
                 )
             }
+
             item {
-                Column {
-                    FilterSection(
-                        onFilterSelected = { onAction(MetricsAction.OnTimeSelected(it)) },
-                        filters = state.timeFilterOptions,
-                        selected = state.timeFilterSelected
-                    )
-                    GraphMetricToggle(
-                        selectedMetric = state.typeFilterSelected,
-                        onMetricSelected = { onAction(MetricsAction.OnTypeSelected(it)) })
-                    Graph(data = state.graphPoints)
-                }
+                FilterSection(
+                    onFilterSelected = { onAction(MetricsAction.OnTimeSelected(it)) },
+                    filters = state.timeFilterOptions,
+                    selected = state.timeFilterSelected
+                )
             }
+
+            item {
+                GraphMetricToggle(
+                    selectedMetric = state.typeFilterSelected,
+                    onMetricSelected = { action ->
+                        onAction(MetricsAction.OnTypeSelected(action))
+                    }
+                )
+            }
+
+            item { Graph(data = state.graphPoints) }
         }
     }
 }
@@ -267,7 +277,7 @@ private fun ExerciseSelectorHeader(
                 FilterChip(
                     selected = selectedMuscleId == muscle.id,
                     onClick = { onMuscleSelected(muscle) },
-                    label = { Text(muscle.name) }
+                    label = { Text(muscle.name.cap()) }
                 )
             }
         }
@@ -279,7 +289,7 @@ private fun ExerciseSelectorHeader(
             onExpandedChange = { onExpandedChange(it) }
         ) {
             OutlinedTextField(
-                value = selectedExercise?.name.orEmpty(),
+                value = selectedExercise?.name.orEmpty().cap(),
                 onValueChange = {},
                 readOnly = true,
                 placeholder = { Text(stringResource(R.string.choose_an_exercise)) },
@@ -327,7 +337,7 @@ private fun ExerciseSummaryCard(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = exerciseName.name,
+                text = exerciseName.name.cap(),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -438,11 +448,7 @@ private fun GraphMetricToggle(
         )
     )
 
-    SingleChoiceSegmentedButtonRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         options.keys.forEachIndexed { index, key ->
             SegmentedButton(
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
@@ -458,7 +464,10 @@ private fun GraphMetricToggle(
                     }
                 }
             ) {
-                Text(options.getValue(key).first, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = options.getValue(key).first,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
@@ -501,7 +510,7 @@ private fun Graph(modifier: Modifier = Modifier, data: List<GraphPoints>) {
                     intersectionPoint = IntersectionPoint(),
                     selectionHighlightPoint = SelectionHighlightPoint(color = MaterialTheme.colorScheme.tertiary),
                     shadowUnderLine = ShadowUnderLine(color = MaterialTheme.colorScheme.primary),
-                    selectionHighlightPopUp = SelectionHighlightPopUp(popUpLabel = { x, y -> " $y kg " })
+                    selectionHighlightPopUp = SelectionHighlightPopUp(popUpLabel = { x, y -> " $y " })
                 )
             ),
         ),
@@ -514,9 +523,39 @@ private fun Graph(modifier: Modifier = Modifier, data: List<GraphPoints>) {
         backgroundColor = MaterialTheme.colorScheme.surfaceVariant
     )
 
-    LineChart(
-        modifier = modifier.height(300.dp),
-        lineChartData = lineChartData
-    )
+    Card {
+        LineChart(
+            modifier = modifier.height(300.dp),
+            lineChartData = lineChartData
+        )
+    }
+}
+
+@Preview(uiMode = UI_MODE_NIGHT_YES)
+@Composable
+fun MetricsScreenPreview() {
+    ExerciseTrackerTheme {
+        MetricsScreen(
+            state = sampleMetricsState,
+            onAction = {}
+        )
+    }
+}
+
+@Preview(uiMode = UI_MODE_NIGHT_YES)
+@Composable
+private fun Preview() {
+    ExerciseTrackerTheme {
+        MetricsScreen(
+            state = MetricsState(),
+            onAction = {}
+        )
+    }
+}
+
+private fun String.cap(): String = this.replaceFirstChar {
+    if (it.isLowerCase()) it.titlecase(
+        getDefault()
+    ) else it.toString()
 }
 
