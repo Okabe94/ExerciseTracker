@@ -27,7 +27,7 @@ class ExerciseListViewModel(
     val state: StateFlow<ExerciseListState> = combine(
         _internalState,
         _activeWorkout,
-        muscleRepository.allMuscles,
+        muscleRepository.allMuscles(),
         exerciseRepository.allExercises(),
     ) { internal, active, muscles, allExercises ->
         val filteredExercises = if (internal.selectedMuscleIds.isEmpty()) {

@@ -26,11 +26,12 @@
     <string name="three_months">3 Meses</string>
     <string name="six_months">6 Meses</string>
     <string name="one_year">1 Año</string>
-    <string name="historic">Histórico</string>
+    <string name="everything">Todo</string>
     <string name="activity_this_week">Actividad esta semana</string>
     <string name="select_exercise">Seleccionar Ejercicio</string>
     <string name="choose_an_exercise">Escoger un ejercicio…</string>
     <string name="total_volume">Volumen Total</string>
     <string name="max_weight">Peso Máximo</string>
     <string name="est_1rm">1RM Est.</string>
+    <string name="kg">Kg</string>
 </resources>

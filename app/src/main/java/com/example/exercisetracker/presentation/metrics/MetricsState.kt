@@ -2,6 +2,8 @@ package com.example.exercisetracker.presentation.metrics
 
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
+import com.example.exercisetracker.domain.filter.TimeFilter
+import com.example.exercisetracker.domain.filter.TypeFilter
 
 data class MetricsState(
     val workoutDaysDone: Set<Int> = emptySet(),
@@ -19,14 +21,6 @@ data class MetricsState(
     val timeFilterOptions: List<TimeFilter> = emptyList(),
     val graphPoints: List<GraphPoints> = emptyList()
 )
-
-enum class TimeFilter {
-    ALL, ONE_MONTH, THREE_MONTH, SIX_MONTH, ONE_YEAR
-}
-
-enum class TypeFilter {
-    REPS, WEIGHT
-}
 
 data class GraphPoints(
     val value: Float = 0f,

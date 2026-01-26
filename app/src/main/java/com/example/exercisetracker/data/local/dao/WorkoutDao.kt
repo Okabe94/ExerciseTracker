@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Update
 import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 import com.example.exercisetracker.data.local.entity.WorkoutSetEntity
+import com.example.exercisetracker.data.local.model.MetricGraphData
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -49,4 +50,10 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workout_sets WHERE sessionId = (SELECT id FROM workout_sessions WHERE isCompleted = 0 ORDER BY startTime DESC LIMIT 1)")
     fun getLastActiveSessionSets(): Flow<List<WorkoutSetEntity>>
+
+    @Query("SELECT startTime FROM workout_sessions WHERE isCompleted = 1 AND endTime IS NOT NULL AND startTime BETWEEN :firstDay AND :lastDay")
+    fun getWorkoutDays(firstDay: Long, lastDay: Long): Flow<List<Long>>
+
+    @Query("SELECT startTime, weight, reps FROM workout_sessions INNER JOIN workout_sets ON workout_sessions.id = workout_sets.sessionId WHERE isCompleted = 1 AND startTime BETWEEN :startTime AND :endTime AND exerciseId = :exerciseId ORDER BY startTime ASC")
+    fun getGraphData(startTime: Long, endTime: Long, exerciseId: Int): Flow<List<MetricGraphData>>
 }

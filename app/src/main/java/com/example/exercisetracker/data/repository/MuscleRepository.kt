@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.map
 
 class MuscleRepository(private val muscleDao: MuscleDao) : IMuscleRepository {
 
-    override val allMuscles: Flow<List<Muscle>> = muscleDao.getAllMuscles()
+    override fun allMuscles(): Flow<List<Muscle>> = muscleDao.getAllMuscles()
         .map { list -> list.map { it.toDomain() } }
 
     override suspend fun insert(muscle: Muscle) {

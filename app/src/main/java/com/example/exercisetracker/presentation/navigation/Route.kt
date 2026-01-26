@@ -7,11 +7,11 @@ import kotlinx.serialization.Serializable
 sealed interface Route : NavKey {
 
     @Serializable
-    data object Home : Route, NavKey
+    data object Home : Route
 
     @Serializable
-    data object Workout : Route, NavKey
+    data object Workout : Route
 
     @Serializable
-    data object Metrics : Route, NavKey
+    data object Metrics : Route
 }

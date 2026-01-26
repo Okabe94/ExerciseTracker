@@ -5,10 +5,12 @@ import com.example.exercisetracker.data.repository.ExerciseRepository
 import com.example.exercisetracker.data.repository.MuscleRepository
 import com.example.exercisetracker.data.repository.WorkoutRepository
 import com.example.exercisetracker.data.time.ExerciseClock
+import com.example.exercisetracker.data.timezone.ExerciseTimeZone
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import com.example.exercisetracker.domain.time.AppClock
+import com.example.exercisetracker.domain.timezone.AppTimeZone
 import com.example.exercisetracker.presentation.home.ExerciseListViewModel
 import com.example.exercisetracker.presentation.metrics.MetricsViewModel
 import com.example.exercisetracker.presentation.workout.WorkoutSessionViewModel
@@ -25,7 +27,8 @@ val appModule = module {
     single { get<ExerciseDatabase>().muscleDao() }
     single { get<ExerciseDatabase>().workoutDao() }
 
-    single<AppClock> { ExerciseClock() }
+    single<AppTimeZone> { ExerciseTimeZone() }
+    single<AppClock> { ExerciseClock(get()) }
 
     // Bind implementations to interfaces
     single<IExerciseRepository> { ExerciseRepository(get()) }
@@ -35,5 +38,5 @@ val appModule = module {
     // ViewModel
     viewModel { ExerciseListViewModel(get(), get(), get()) }
     viewModel { WorkoutSessionViewModel(get(), get()) }
-    viewModel { MetricsViewModel() }
+    viewModel { MetricsViewModel(get(), get(), get(), get()) }
 }
