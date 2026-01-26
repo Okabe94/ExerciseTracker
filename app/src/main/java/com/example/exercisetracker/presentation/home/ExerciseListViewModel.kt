@@ -7,6 +7,7 @@ import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
+import com.example.exercisetracker.domain.time.AppClock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,20 +17,23 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ExerciseListViewModel(
+    private val clock: AppClock,
     private val muscleRepository: IMuscleRepository,
     private val exerciseRepository: IExerciseRepository,
     private val workoutRepository: IWorkoutRepository
 ) : ViewModel() {
 
+    private val _workoutWeek = workoutRepository.getWorkoutDays()
     private val _internalState = MutableStateFlow(InternalState())
     private val _activeWorkout = workoutRepository.getLastActiveSessionFlow()
 
     val state: StateFlow<ExerciseListState> = combine(
+        _workoutWeek,
         _internalState,
         _activeWorkout,
         muscleRepository.allMuscles(),
         exerciseRepository.allExercises(),
-    ) { internal, active, muscles, allExercises ->
+    ) { week, internal, active, muscles, allExercises ->
         val filteredExercises = if (internal.selectedMuscleIds.isEmpty()) {
             allExercises
         } else {
@@ -37,6 +41,8 @@ class ExerciseListViewModel(
         }
 
         ExerciseListState(
+            workoutDaysDone = week,
+            currentDay = clock.getCurrentDay(),
             muscleList = muscles,
             exerciseList = filteredExercises,
             hasActiveWorkout = active != null,

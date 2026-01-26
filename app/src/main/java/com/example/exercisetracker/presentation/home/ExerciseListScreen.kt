@@ -2,14 +2,15 @@
 
 package com.example.exercisetracker.presentation.home
 
+import android.content.res.Configuration
+import android.content.res.Configuration.UI_MODE_NIGHT_NO
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonShapes
@@ -36,9 +38,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -57,6 +57,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -65,12 +67,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.AndroidUiModes.UI_MODE_NIGHT_YES
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.R
 import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
+import com.example.exercisetracker.ui.theme.Gold400
+import com.example.exercisetracker.ui.theme.Gold500
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -101,6 +106,12 @@ fun ExerciseListScreen(
 ) {
     Scaffold(
         modifier = Modifier.padding(16.dp),
+        topBar = {
+            WorkoutWeekCalendar(
+                workoutDays = state.workoutDaysDone,
+                currentDay = state.currentDay
+            )
+        },
         bottomBar = { ActionsSection(onAction = onAction, state = state) }
     ) { paddingValues ->
         Column(
@@ -177,6 +188,139 @@ fun ExerciseListScreen(
 
     }
 }
+
+@Composable
+private fun WorkoutWeekCalendar(
+    workoutDays: Set<Int>,
+    currentDay: Int
+) {
+    val days = listOf("L", "M", "X", "J", "V", "S", "D")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.activity_this_week),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            days.forEachIndexed { index, day ->
+                val dayNumber = index + 1
+                val isWorkoutDone = workoutDays.contains(dayNumber)
+                val isToday = dayNumber == currentDay
+                val isWeekDone = workoutDays.size >= 4
+
+                DayNode(
+                    dayName = day,
+                    isWorkoutDone = isWorkoutDone,
+                    isToday = isToday,
+                    isWeekDone = isWeekDone
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayNode(
+    dayName: String,
+    isWorkoutDone: Boolean,
+    isToday: Boolean,
+    isWeekDone: Boolean
+) {
+    val node = getDayNodeColors(isWorkoutDone, isToday, isWeekDone)
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(color = node.backgroundColor)
+                .border(
+                    width = node.borderSize,
+                    color = node.borderColor,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isWorkoutDone) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.outline_local_fire_department_24),
+                    contentDescription = null,
+                    tint = node.tintColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                Text(
+                    text = dayName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = node.textColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun getDayNodeColors(
+    isWorkoutDone: Boolean,
+    isToday: Boolean,
+    isWeekDone: Boolean
+): DayNodeColors {
+    val backgroundColor = when {
+        isWeekDone && isWorkoutDone -> Gold500
+        isWorkoutDone -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+    }
+
+    val borderColor = when {
+        isWeekDone && isWorkoutDone -> Gold400
+        isWorkoutDone -> MaterialTheme.colorScheme.primary
+        isToday -> MaterialTheme.colorScheme.error
+        else -> Color.Transparent
+    }
+
+    val tintColor = when {
+        isWeekDone && isWorkoutDone -> Color.Black
+        else -> MaterialTheme.colorScheme.onPrimary
+    }
+
+    val textColor = when {
+        isToday -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val borderSize = when {
+        isToday || isWeekDone -> 2.dp
+        else -> 0.dp
+    }
+
+    return DayNodeColors(
+        backgroundColor = backgroundColor,
+        borderColor = borderColor,
+        tintColor = tintColor,
+        textColor = textColor,
+        borderSize = borderSize
+    )
+}
+
+private data class DayNodeColors(
+    val backgroundColor: Color,
+    val borderColor: Color,
+    val tintColor: Color,
+    val textColor: Color,
+    val borderSize: Dp
+)
+
 
 @Composable
 private fun MuscleSection(
@@ -552,6 +696,164 @@ private suspend fun animateCheck(anim: Animatable<Float, AnimationVector1D>) {
         targetValue = 0f,
         animationSpec = tween(100)
     )
+}
+
+@Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
+@Composable
+private fun DayNodesLightPreview() {
+    ExerciseTrackerTheme {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Regular day
+                Text(
+                    text = "RD",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = false, isWeekDone = false)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Today
+                Text(
+                    text = "T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = true, isWeekDone = false)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout done this day
+                Text(
+                    text = "WD TT",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = false, isWeekDone = false)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout done today
+                Text(
+                    text = "WD T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = true, isWeekDone = false)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Today
+                Text(
+                    text = "T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = true, isWeekDone = true)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout week completed regular day
+                Text(
+                    text = "WC RD",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = false, isWeekDone = true)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout week completed and done this day
+                Text(
+                    text = "WC TT",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = false, isWeekDone = true)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout week completed and done today
+                Text(
+                    text = "WC T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = true, isWeekDone = true)
+            }
+        }
+    }
+}
+
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun DayNodesPreview() {
+    ExerciseTrackerTheme {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Regular day
+                Text(
+                    text = "RD",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = false, isWeekDone = false)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Today
+                Text(
+                    text = "T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = true, isWeekDone = false)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout done this day
+                Text(
+                    text = "WD TT",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = false, isWeekDone = false)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout done today
+                Text(
+                    text = "WD T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = true, isWeekDone = false)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Today
+                Text(
+                    text = "T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = true, isWeekDone = true)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout week completed regular day
+                Text(
+                    text = "WC RD",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = false, isToday = false, isWeekDone = true)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout week completed and done this day
+                Text(
+                    text = "WC TT",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = false, isWeekDone = true)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Workout week completed and done today
+                Text(
+                    text = "WC T",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                DayNode("L", isWorkoutDone = true, isToday = true, isWeekDone = true)
+            }
+        }
+    }
 }
 
 @Preview(uiMode = UI_MODE_NIGHT_YES)

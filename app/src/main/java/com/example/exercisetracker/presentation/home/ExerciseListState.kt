@@ -4,6 +4,8 @@ import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
 
 data class ExerciseListState(
+    val workoutDaysDone: Set<Int> = emptySet(),
+    val currentDay: Int = 0,
     val searchQuery: String = "",
     val hasActiveWorkout: Boolean = false,
     val startWorkoutButtonVisible: Boolean = false,

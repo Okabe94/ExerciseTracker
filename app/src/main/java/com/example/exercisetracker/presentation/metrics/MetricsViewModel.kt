@@ -35,7 +35,6 @@ class MetricsViewModel(
         exerciseRepository.allExercises()
     ) { muscles, exercises -> Pair(muscles, exercises) }
 
-    private val _workoutWeek = workoutRepository.getWorkoutDays()
     private val _filterState = MutableStateFlow(FilterState())
     private val _internalState = MutableStateFlow(InternalState())
 
@@ -51,12 +50,11 @@ class MetricsViewModel(
     }
 
     val state = combine(
-        _workoutWeek,
         _musclesAndExercises,
         _filterState,
         _internalState,
         _graphDataState
-    ) { workoutWeek, musclesAndExercises, filter, internal, graph ->
+    ) { musclesAndExercises, filter, internal, graph ->
         val filteredExercises =
             if (internal.muscleSelected != null) {
                 musclesAndExercises.second.filter { it.targetMuscleId == internal.muscleSelected.id }
@@ -84,8 +82,6 @@ class MetricsViewModel(
         }
 
         MetricsState(
-            workoutDaysDone = workoutWeek,
-            currentDay = clock.getCurrentDay(),
             filteredMuscleId = internal.muscleSelected?.id ?: 0,
             selectedExercise = filter.selectedExercise,
             expandedExerciseSelection = internal.expandedList,

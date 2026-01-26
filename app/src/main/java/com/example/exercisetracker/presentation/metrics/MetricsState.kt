@@ -6,8 +6,6 @@ import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
 
 data class MetricsState(
-    val workoutDaysDone: Set<Int> = emptySet(),
-    val currentDay: Int = 0,
     val filteredMuscleId: Int = 0,
     val selectedExercise: Exercise? = null,
     val expandedExerciseSelection: Boolean = false,

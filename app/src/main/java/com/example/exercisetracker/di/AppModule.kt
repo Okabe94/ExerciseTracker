@@ -36,7 +36,7 @@ val appModule = module {
     single<IWorkoutRepository> { WorkoutRepository(get(), get()) }
 
     // ViewModel
-    viewModel { ExerciseListViewModel(get(), get(), get()) }
+    viewModel { ExerciseListViewModel(get(), get(), get(), get()) }
     viewModel { WorkoutSessionViewModel(get(), get()) }
     viewModel { MetricsViewModel(get(), get(), get(), get()) }
 }
