@@ -6,8 +6,8 @@ import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
 
 val sampleMetricsState = MetricsState(
-    workoutDaysDone = setOf(1, 2, 3),
-    currentDay = 3,
+    workoutDaysDone = setOf(1, 2, 3, 4, 5),
+    currentDay = 7,
     filteredMuscleId = 1,
     selectedExercise = Exercise(
         id = 1,
