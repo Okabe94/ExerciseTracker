@@ -6,6 +6,7 @@ import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.time.AppClock
 import com.example.exercisetracker.domain.timezone.AppTimeZone
 import java.time.Instant
+import java.time.format.DateTimeFormatter
 import kotlin.time.ExperimentalTime
 
 class ExerciseClock(
@@ -19,6 +20,13 @@ class ExerciseClock(
         .toLocalDate()
         .dayOfWeek
         .value
+
+    override fun getDateLabel(millis: Long): String {
+        val formatter = DateTimeFormatter.ofPattern("dd/MMM")
+        return Instant.ofEpochMilli(millis)
+            .atZone(timeZone.getTimeZone())
+            .format(formatter)
+    }
 
     override fun millisThen(timeFilter: TimeFilter): Long {
         val now = Instant

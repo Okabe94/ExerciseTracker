@@ -65,12 +65,13 @@ import co.yml.charts.ui.linechart.model.SelectionHighlightPoint
 import co.yml.charts.ui.linechart.model.SelectionHighlightPopUp
 import co.yml.charts.ui.linechart.model.ShadowUnderLine
 import com.example.exercisetracker.R
-import com.example.exercisetracker.domain.model.Exercise
-import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
+import com.example.exercisetracker.domain.model.Exercise
+import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import com.example.exercisetracker.ui.theme.Orange500
+import java.util.Locale
 
 @Composable
 fun MetricsRoot(
@@ -132,12 +133,14 @@ fun MetricsScreen(
             item {
                 Column {
                     FilterSection(
-                        onFilterSelected = {},
+                        onFilterSelected = { onAction(MetricsAction.OnTimeSelected(it)) },
                         filters = state.timeFilterOptions,
                         selected = state.timeFilterSelected
                     )
-                    GraphMetricToggle(state.typeFilterSelected, {})
-                    Graph()
+                    GraphMetricToggle(
+                        selectedMetric = state.typeFilterSelected,
+                        onMetricSelected = { onAction(MetricsAction.OnTypeSelected(it)) })
+                    Graph(data = state.graphPoints)
                 }
             }
         }
@@ -308,7 +311,7 @@ private fun ExerciseSummaryCard(
     exerciseName: Exercise?,
     totalVolume: Float,
     maxWeight: Float,
-    estimated1RM: Float,
+    estimated1RM: Double,
 ) {
     if (exerciseName == null) return
 
@@ -352,7 +355,7 @@ private fun ExerciseSummaryCard(
                 )
                 StatItem(
                     label = stringResource(R.string.est_1rm),
-                    value = "$estimated1RM",
+                    value = String.format(Locale.getDefault(), "%.2f", estimated1RM),
                     Modifier.weight(1f)
                 )
             }
@@ -421,8 +424,8 @@ private fun FilterSection(
 
 @Composable
 private fun GraphMetricToggle(
+    onMetricSelected: (TypeFilter) -> Unit,
     selectedMetric: TypeFilter,
-    onMetricSelected: (Int) -> Unit
 ) {
     val options = mapOf(
         TypeFilter.WEIGHT to Pair(
@@ -443,7 +446,7 @@ private fun GraphMetricToggle(
         options.keys.forEachIndexed { index, key ->
             SegmentedButton(
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                onClick = { onMetricSelected(index) },
+                onClick = { onMetricSelected(key) },
                 selected = key == selectedMetric,
                 icon = {
                     SegmentedButtonDefaults.Icon(active = key == selectedMetric) {
@@ -462,43 +465,43 @@ private fun GraphMetricToggle(
 }
 
 @Composable
-private fun Graph(modifier: Modifier = Modifier) {
-    val pointsData: List<Point> = listOf(
-        Point(x = 0f, y = 40f),
-        Point(1f, 90f),
-        Point(1f, 0f),
-        Point(0f, 60f),
-        Point(4f, 10f)
-    )
+private fun Graph(modifier: Modifier = Modifier, data: List<GraphPoints>) {
+    if (data.isEmpty()) return
+
+    val mapped = data.mapIndexed { index, point ->
+        Point(x = index.toFloat() + 1, y = point.value, description = point.description)
+    }
+
+    val points = listOf(Point(0f, 0f, "")) + mapped
+    val maxValue = points.maxOfOrNull { it.y } ?: 0f
+
     val xAxisData = AxisData.Builder()
         .axisStepSize(60.dp)
         .backgroundColor(MaterialTheme.colorScheme.surfaceVariant)
         .axisLabelColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        .steps(pointsData.size - 1)
-        .labelData { i -> pointsData[i].description }
-        .labelAndAxisLinePadding(15.dp)
+        .steps(points.size - 1)
+        .labelData { i -> points[i].description }
+        .labelAndAxisLinePadding(20.dp)
         .build()
 
     val yAxisData = AxisData.Builder()
         .steps(10)
         .backgroundColor(MaterialTheme.colorScheme.surfaceVariant)
         .axisLabelColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        .labelAndAxisLinePadding(20.dp)
-        .labelData { i ->
-            val yScale = 100 / 10f
-            (i * yScale).formatToSinglePrecision()
-        }.build()
+        .labelAndAxisLinePadding(30.dp)
+        .labelData { index -> (index * (maxValue / 10)).formatToSinglePrecision() }
+        .build()
 
     val lineChartData = LineChartData(
         linePlotData = LinePlotData(
             lines = listOf(
                 Line(
-                    dataPoints = pointsData,
+                    dataPoints = points,
                     lineStyle = LineStyle(),
                     intersectionPoint = IntersectionPoint(),
-                    selectionHighlightPoint = SelectionHighlightPoint(),
+                    selectionHighlightPoint = SelectionHighlightPoint(color = MaterialTheme.colorScheme.tertiary),
                     shadowUnderLine = ShadowUnderLine(color = MaterialTheme.colorScheme.primary),
-                    selectionHighlightPopUp = SelectionHighlightPopUp()
+                    selectionHighlightPopUp = SelectionHighlightPopUp(popUpLabel = { x, y -> " $y kg " })
                 )
             ),
         ),
@@ -517,13 +520,3 @@ private fun Graph(modifier: Modifier = Modifier) {
     )
 }
 
-@Preview(uiMode = UI_MODE_NIGHT_YES)
-@Composable
-private fun Preview() {
-    ExerciseTrackerTheme {
-        MetricsScreen(
-            state = MetricsState(),
-            onAction = {}
-        )
-    }
-}

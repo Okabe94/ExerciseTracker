@@ -2,7 +2,6 @@
 
 package com.example.exercisetracker.data.repository
 
-import android.util.Log
 import com.example.exercisetracker.data.local.dao.WorkoutDao
 import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 import com.example.exercisetracker.data.local.model.MetricGraphData
@@ -103,7 +102,7 @@ class WorkoutRepository(
     ): Flow<List<MetricGraphData>> {
         val now = clock.now()
         val then = clock.millisThen(timeFilter)
-        Log.e("HOLAAA", "now $now  \nthen $then")
+
         return workoutDao.getGraphData(
             startTime = then,
             endTime = now,

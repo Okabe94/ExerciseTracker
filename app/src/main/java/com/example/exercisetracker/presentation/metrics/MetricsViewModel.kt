@@ -1,24 +1,27 @@
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package com.example.exercisetracker.presentation.metrics
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.exercisetracker.domain.model.Exercise
-import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
+import com.example.exercisetracker.domain.model.Exercise
+import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import com.example.exercisetracker.domain.time.AppClock
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.forEach
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+
+private const val connerConstant = 0.025
 
 class MetricsViewModel(
     private val clock: AppClock,
@@ -27,35 +30,58 @@ class MetricsViewModel(
     private val muscleRepository: IMuscleRepository
 ) : ViewModel() {
 
-    private val _allMuscles = muscleRepository.allMuscles()
-    private val _allExercises = exerciseRepository.allExercises()
+    private val _musclesAndExercises = combine(
+        muscleRepository.allMuscles(),
+        exerciseRepository.allExercises()
+    ) { muscles, exercises -> Pair(muscles, exercises) }
+
     private val _workoutWeek = workoutRepository.getWorkoutDays()
     private val _filterState = MutableStateFlow(FilterState())
     private val _internalState = MutableStateFlow(InternalState())
 
-    // Flow for graph
-
-    init {
-        viewModelScope.launch {
-            workoutRepository.getGraphData(TimeFilter.ONE_MONTH, 1).collectLatest {
-                Log.e("CHAAAO", it.toString())
-            }
+    private val _graphDataState = _filterState.flatMapLatest { filters ->
+        if (filters.selectedExercise != null) {
+            workoutRepository.getGraphData(
+                timeFilter = filters.timeSelected,
+                exerciseId = filters.selectedExercise.id
+            )
+        } else {
+            flowOf(emptyList())
         }
     }
 
     val state = combine(
         _workoutWeek,
-        _allMuscles,
-        _allExercises,
+        _musclesAndExercises,
         _filterState,
-        _internalState
-    ) { workoutWeek, muscles, exercises, filter, internal ->
+        _internalState,
+        _graphDataState
+    ) { workoutWeek, musclesAndExercises, filter, internal, graph ->
         val filteredExercises =
             if (internal.muscleSelected != null) {
-                exercises.filter { it.targetMuscleId == internal.muscleSelected.id }
+                musclesAndExercises.second.filter { it.targetMuscleId == internal.muscleSelected.id }
             } else {
-                exercises
+                musclesAndExercises.second
             }
+
+        val maxWeight = graph.maxOfOrNull { it.weight } ?: 0f
+        val totalVolume = graph.map { (it.weight * it.reps) }
+            .reduceOrNull { acc, value -> acc + value }
+            ?: 0f
+
+        val rm = graph.maxByOrNull { it.weight }?.let {
+            it.weight * (1 + connerConstant * it.reps)
+        } ?: 0.0
+
+        val graphList = graph.map {
+            val value = if (filter.typeSelected == TypeFilter.WEIGHT) {
+                it.weight
+            } else {
+                it.reps.toFloat()
+            }
+            val description = clock.getDateLabel(it.startTime)
+            GraphPoints(value, description)
+        }
 
         MetricsState(
             workoutDaysDone = workoutWeek,
@@ -63,15 +89,15 @@ class MetricsViewModel(
             filteredMuscleId = internal.muscleSelected?.id ?: 0,
             selectedExercise = filter.selectedExercise,
             expandedExerciseSelection = internal.expandedList,
-            muscleList = muscles,
+            muscleList = musclesAndExercises.first,
             exerciseList = filteredExercises,
-            totalVolume = 0f, // TODO
-            maxWeight = 0f, // TODO
-            rm = 0f, // TODO
+            totalVolume = totalVolume,
+            maxWeight = maxWeight,
+            rm = rm,
             timeFilterSelected = filter.timeSelected,
             timeFilterOptions = filter.timeFilterOptions,
             typeFilterSelected = filter.typeSelected,
-            graphPoints = emptyList() // TODO
+            graphPoints = graphList
         )
     }.stateIn(
         scope = viewModelScope,
@@ -117,11 +143,11 @@ class MetricsViewModel(
         val timeSelected: TimeFilter = TimeFilter.ONE_MONTH,
         val typeSelected: TypeFilter = TypeFilter.WEIGHT,
         val timeFilterOptions: List<TimeFilter> = listOf(
-            TimeFilter.ALL,
             TimeFilter.ONE_MONTH,
             TimeFilter.THREE_MONTH,
             TimeFilter.SIX_MONTH,
-            TimeFilter.ONE_YEAR
+            TimeFilter.ONE_YEAR,
+            TimeFilter.ALL,
         )
     )
 }

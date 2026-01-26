@@ -15,7 +15,7 @@ data class MetricsState(
     val exerciseList: List<Exercise> = emptyList(),
     val totalVolume: Float = 0f,
     val maxWeight: Float = 0f,
-    val rm: Float = 0f,
+    val rm: Double = 0.0,
     val typeFilterSelected: TypeFilter = TypeFilter.REPS,
     val timeFilterSelected: TimeFilter = TimeFilter.ALL,
     val timeFilterOptions: List<TimeFilter> = emptyList(),
