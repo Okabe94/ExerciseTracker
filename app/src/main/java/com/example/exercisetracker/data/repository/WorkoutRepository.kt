@@ -5,6 +5,7 @@ package com.example.exercisetracker.data.repository
 import com.example.exercisetracker.data.local.dao.WorkoutDao
 import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 import com.example.exercisetracker.data.local.model.MetricGraphData
+import com.example.exercisetracker.data.local.model.WorkoutReview
 import com.example.exercisetracker.data.mapper.toDomain
 import com.example.exercisetracker.data.mapper.toEntity
 import com.example.exercisetracker.domain.filter.TimeFilter
@@ -108,5 +109,21 @@ class WorkoutRepository(
             endTime = now,
             exerciseId = exerciseId
         )
+    }
+
+    override suspend fun getWorkoutReview(day: Int): List<WorkoutReview> {
+        val zone = ZoneId.systemDefault()
+        val startOfDay = Instant.ofEpochMilli(clock.now())
+            .atZone(zone)
+            .with(ChronoField.DAY_OF_WEEK, day.toLong())
+            .toLocalDate()
+            .atStartOfDay()
+
+        val endOfDay = startOfDay.plusDays(1)
+
+        val startMillis = startOfDay.atZone(zone).toInstant().toEpochMilli()
+        val endMillis = endOfDay.atZone(zone).toInstant().toEpochMilli()
+
+        return workoutDao.getWorkoutReview(startMillis, endMillis)
     }
 }

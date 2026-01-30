@@ -2,10 +2,12 @@ package com.example.exercisetracker.data.mapper
 
 import com.example.exercisetracker.data.local.entity.ExerciseEntity
 import com.example.exercisetracker.data.local.entity.MuscleEntity
+import com.example.exercisetracker.data.local.entity.WorkoutPlanEntity
 import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 import com.example.exercisetracker.data.local.entity.WorkoutSetEntity
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
+import com.example.exercisetracker.domain.model.WorkoutPlan
 import com.example.exercisetracker.domain.model.WorkoutSession
 import com.example.exercisetracker.domain.model.WorkoutSet
 
@@ -37,6 +39,12 @@ fun WorkoutSetEntity.toDomain() = WorkoutSet(
     reps = reps
 )
 
+fun WorkoutPlanEntity.toDomain() = WorkoutPlan(
+    id = id,
+    date = date,
+    exercises = exercises
+)
+
 fun Muscle.toEntity() = MuscleEntity(
     id = id,
     name = name
@@ -63,4 +71,10 @@ fun WorkoutSet.toEntity() = WorkoutSetEntity(
     setNumber = setNumber,
     weight = weight,
     reps = reps
+)
+
+fun WorkoutPlan.toEntity() = WorkoutPlanEntity(
+    id = id,
+    date = date,
+    exercises = exercises
 )

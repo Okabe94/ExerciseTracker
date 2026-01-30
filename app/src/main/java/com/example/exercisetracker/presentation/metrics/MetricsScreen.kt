@@ -5,6 +5,7 @@ package com.example.exercisetracker.presentation.metrics
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,8 +18,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,17 +32,24 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -65,6 +76,7 @@ import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
+import com.example.exercisetracker.domain.model.WorkoutSet
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import java.util.Locale
 import java.util.Locale.getDefault
@@ -142,7 +154,108 @@ fun MetricsScreen(
             }
 
             item { Graph(data = state.graphPoints) }
+
+            item {
+                HistoricalSetRow(
+                    WorkoutSet(
+                        id = 1,
+                        sessionId = 1,
+                        exerciseId = 1,
+                        setNumber = 3,
+                        weight = 23f,
+                        reps = 2
+                    )
+                ) { }
+            }
         }
+    }
+}
+
+@Composable
+fun SetInfoRow(
+    setNumber: Int,
+    weight: Float,
+    reps: Int,
+    unit: String = "lbs",
+    isLastSet: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 1. Set Number Indicator
+        Surface(
+            shape = CircleShape,
+            color = Color(0xFF6650a4).copy(alpha = 0.1f), // Brand color light background
+            modifier = Modifier.size(32.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "$setNumber",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color(0xFF6650a4), // Brand color text
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // 2. Weight Info
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Weight",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "$weight",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = " $unit",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
+        }
+
+        // 3. Multiplication Sign (Visual Separator)
+        Text(
+            text = "×",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        // 4. Reps Info
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Reps",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "$reps",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        // This is where you'd put the Three-Dot menu icon we discussed!
+    }
+
+    if (!isLastSet) {
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 48.dp, top = 4.dp),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 
@@ -428,6 +541,64 @@ private fun Graph(modifier: Modifier = Modifier, data: List<GraphPoints>) {
         LineChart(
             modifier = modifier.height(300.dp),
             lineChartData = lineChartData
+        )
+    }
+}
+
+@Composable
+fun HistoricalSetRow(
+    set: WorkoutSet,
+    onDeleteConfirmed: (WorkoutSet) -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        with(set){
+            SetInfoRow(setNumber, weight, reps, "kg", false)
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        IconButton(onClick = { showMenu = true }) {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.outline_more_vert_24),
+                contentDescription = "Options"
+            )
+        }
+
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenuItem(
+                text = { Text("Delete Set", color = Color.Red) },
+                onClick = {
+                    showMenu = false
+                    showDialog = true
+                }
+            )
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Delete Historical Data?") },
+            text = { Text("This will permanently remove this set and update your progress charts.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteConfirmed(set)
+                    showDialog = false
+                }) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+            }
         )
     }
 }

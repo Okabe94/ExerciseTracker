@@ -2,16 +2,21 @@ package com.example.exercisetracker.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.exercisetracker.R
+import com.example.exercisetracker.core.presentation.util.UiText
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
+import com.example.exercisetracker.domain.repository.IWorkoutPlanRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import com.example.exercisetracker.domain.time.AppClock
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -20,30 +25,40 @@ class ExerciseListViewModel(
     private val clock: AppClock,
     private val muscleRepository: IMuscleRepository,
     private val exerciseRepository: IExerciseRepository,
-    private val workoutRepository: IWorkoutRepository
+    private val workoutRepository: IWorkoutRepository,
+    private val planRepository: IWorkoutPlanRepository
 ) : ViewModel() {
 
     private val _workoutWeek = workoutRepository.getWorkoutDays()
     private val _internalState = MutableStateFlow(InternalState())
     private val _activeWorkout = workoutRepository.getLastActiveSessionFlow()
 
+    private val _musclesAndExercises = combine(
+        muscleRepository.allMuscles(),
+        exerciseRepository.allExercises()
+    ) { muscles, exercises ->
+        Pair(muscles, exercises)
+    }
+
+    private val _eventsChannel = Channel<ExerciseListEvent>()
+    val events = _eventsChannel.receiveAsFlow()
+
     val state: StateFlow<ExerciseListState> = combine(
         _workoutWeek,
         _internalState,
         _activeWorkout,
-        muscleRepository.allMuscles(),
-        exerciseRepository.allExercises(),
-    ) { week, internal, active, muscles, allExercises ->
+        _musclesAndExercises
+    ) { week, internal, active, musclesAndExercises ->
         val filteredExercises = if (internal.selectedMuscleIds.isEmpty()) {
-            allExercises
+            musclesAndExercises.second
         } else {
-            allExercises.filter { it.targetMuscleId in internal.selectedMuscleIds }
+            musclesAndExercises.second.filter { it.targetMuscleId in internal.selectedMuscleIds }
         }
 
         ExerciseListState(
             workoutDaysDone = week,
             currentDay = clock.getCurrentDay(),
-            muscleList = muscles,
+            muscleList = musclesAndExercises.first,
             exerciseList = filteredExercises,
             hasActiveWorkout = active != null,
             confirmDialogVisible = internal.confirmDialogVisible,
@@ -85,6 +100,41 @@ class ExerciseListViewModel(
             }
 
             is ExerciseListAction.OnShowConfirmDialog -> toggleConfirmDialog(action.show)
+
+            is ExerciseListAction.OnDayNodeSelected -> {
+                val currentDay = clock.getCurrentDay()
+
+                when {
+                    currentDay > action.day -> {
+                        viewModelScope.launch {
+                            val reviewList = workoutRepository.getWorkoutReview(action.day)
+                            if (reviewList.isEmpty()) {
+                                _eventsChannel.trySend(
+                                    ExerciseListEvent.ErrorMessage(
+                                        UiText.StringResource(R.string.not_trained_this_day)
+                                    )
+                                )
+                            }
+                        }
+                        _internalState.update { state ->
+                            state.copy(screenMode = ScreenMode.REVIEWING)
+                        }
+                    }
+
+                    currentDay < action.day -> {
+                        _internalState.update { state ->
+                            state.copy(screenMode = ScreenMode.PLANNING)
+                        }
+                    }
+
+                    else -> {
+                        _internalState.update { state ->
+                            state.copy(screenMode = ScreenMode.WORKOUT)
+                        }
+                    }
+                }
+
+            }
 
             else -> Unit
         }
@@ -143,6 +193,7 @@ class ExerciseListViewModel(
     }
 
     private data class InternalState(
+        val screenMode: ScreenMode = ScreenMode.WORKOUT,
         val startWorkoutButtonVisible: Boolean = false,
         val muscleDialogVisible: Boolean = false,
         val exerciseDialogVisible: Boolean = false,
@@ -150,4 +201,8 @@ class ExerciseListViewModel(
         val selectedMuscleIds: MutableSet<Int> = mutableSetOf(),
         val selectedExerciseIds: MutableSet<Int> = mutableSetOf()
     )
+
+    private enum class ScreenMode {
+        WORKOUT, PLANNING, REVIEWING
+    }
 }

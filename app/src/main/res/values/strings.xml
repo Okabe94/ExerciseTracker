@@ -34,4 +34,5 @@
     <string name="max_weight">Peso Máximo</string>
     <string name="est_1rm">1RM Est.</string>
     <string name="kg">Kg</string>
+    <string name="not_trained_this_day">No se entrenó este día</string>
 </resources>
