@@ -11,6 +11,8 @@
     <string name="Cancel">Cancelar</string>
     <string name="no_exercises_found">No se encontraron ejercicios para este músculo</string>
     <string name="no_muscles_found">No se encontraron músculos</string>
+    <string name="return_to_workout">Regresar</string>
+    <string name="save_workout">Agendar</string>
     <string name="workout">Entrenar</string>
     <string name="resume">Reanudar</string>
     <string name="finish">Finalizar</string>
@@ -22,17 +24,19 @@
     <string name="new_session_confirm_dialog_message">Empezar cerrará la sesión que tienes activa en este momento. \n\n¿Quieres empezar una nueva sesión?</string>
     <string name="metrics">Métricas</string>
     <string name="training">Entrenamiento</string>
+    <string name="one_week">1 Semana</string>
     <string name="one_month">1 Mes</string>
     <string name="three_months">3 Meses</string>
     <string name="six_months">6 Meses</string>
     <string name="one_year">1 Año</string>
     <string name="everything">Todo</string>
     <string name="activity_this_week">Actividad esta semana</string>
+    <string name="planning">Planeando día</string>
     <string name="select_exercise">Seleccionar Ejercicio</string>
     <string name="choose_an_exercise">Escoger un ejercicio…</string>
     <string name="total_volume">Volumen Total</string>
     <string name="max_weight">Peso Máximo</string>
     <string name="est_1rm">1RM Est.</string>
     <string name="kg">Kg</string>
-    <string name="not_trained_this_day">No se entrenó este día</string>
+    <string name="not_trained_this_day">Vago hp, no entrenaste</string>
 </resources>

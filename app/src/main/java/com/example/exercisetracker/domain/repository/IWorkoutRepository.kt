@@ -13,7 +13,7 @@ interface IWorkoutRepository {
     fun getLastActiveSessionFlow(): Flow<WorkoutSession?>
     fun getSetsForSession(sessionId: Int): Flow<List<WorkoutSet>>
     fun getGraphData(timeFilter: TimeFilter, exerciseId: Int): Flow<List<MetricGraphData>>
-    suspend fun getWorkoutReview(day: Int): List<WorkoutReview>
+    suspend fun getWorkoutReview(day: Int): Flow<List<WorkoutReview>>
     suspend fun updateSet(set: WorkoutSet)
     suspend fun getActiveSessionId(): Int?
     suspend fun completeOpenSessions()

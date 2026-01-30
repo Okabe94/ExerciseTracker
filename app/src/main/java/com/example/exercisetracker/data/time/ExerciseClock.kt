@@ -39,6 +39,7 @@ class ExerciseClock(
 
         return when (timeFilter) {
             TimeFilter.ALL -> 0L
+            TimeFilter.ONE_WEEK -> now.minusWeeks(1).toInstant().toEpochMilli()
             TimeFilter.ONE_MONTH -> now.minusMonths(1).toInstant().toEpochMilli()
             TimeFilter.THREE_MONTH -> now.minusMonths(3).toInstant().toEpochMilli()
             TimeFilter.SIX_MONTH -> now.minusMonths(6).toInstant().toEpochMilli()

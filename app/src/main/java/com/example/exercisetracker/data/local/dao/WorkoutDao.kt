@@ -50,14 +50,15 @@ interface WorkoutDao {
     suspend fun getSetsForSessionSync(sessionId: Int): List<WorkoutSetEntity>
 
     @Query(
-        "SELECT startTime, setNumber, name, weight, reps\n" +
-                "FROM workout_sessions \n" +
-                "INNER JOIN workout_sets ON workout_sessions.id = workout_sets.sessionId\n" +
+        "SELECT session.id AS sessionId, sets.id AS setId, startTime, setNumber, muscles.name AS muscleName, exercises.name AS exerciseName, weight, reps\n" +
+                "FROM workout_sessions AS session\n" +
+                "INNER JOIN workout_sets AS sets ON session.id = sets.sessionId\n" +
                 "INNER JOIN exercises ON exerciseId = exercises.id\n" +
+                "INNER JOIN muscles ON exercises.targetMuscleId = muscles.id\n" +
                 "WHERE isCompleted = 1 AND startTime >= :startTime AND startTime <= :endTime\n" +
                 "ORDER BY setNumber AND exerciseId ASC"
     )
-    suspend fun getWorkoutReview(startTime: Long, endTime: Long): List<WorkoutReview>
+    fun getWorkoutReview(startTime: Long, endTime: Long): Flow<List<WorkoutReview>>
 
     @Query("SELECT * FROM workout_sets WHERE sessionId = (SELECT id FROM workout_sessions WHERE isCompleted = 0 ORDER BY startTime DESC LIMIT 1)")
     fun getLastActiveSessionSets(): Flow<List<WorkoutSetEntity>>

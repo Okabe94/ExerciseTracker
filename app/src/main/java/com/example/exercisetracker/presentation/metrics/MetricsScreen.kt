@@ -432,6 +432,7 @@ private fun FilterSection(
         items(filters) { item ->
             val res = when (item) {
                 TimeFilter.ALL -> R.string.everything
+                TimeFilter.ONE_WEEK -> R.string.one_week
                 TimeFilter.ONE_MONTH -> R.string.one_month
                 TimeFilter.THREE_MONTH -> R.string.three_months
                 TimeFilter.SIX_MONTH -> R.string.six_months

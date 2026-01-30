@@ -4,6 +4,7 @@ import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
 
 data class ExerciseListState(
+    val screenMode: ScreenMode = ScreenMode.Workout,
     val workoutDaysDone: Set<Int> = emptySet(),
     val currentDay: Int = 0,
     val searchQuery: String = "",
@@ -17,3 +18,8 @@ data class ExerciseListState(
     val muscleList: List<Muscle> = emptyList(),
     val exerciseList: List<Exercise> = emptyList(),
 )
+
+sealed interface ScreenMode {
+    data object Workout : ScreenMode
+    data class Planning(val day: Int) : ScreenMode
+}

@@ -15,6 +15,7 @@ import com.example.exercisetracker.domain.time.AppClock
 import com.example.exercisetracker.domain.timezone.AppTimeZone
 import com.example.exercisetracker.presentation.home.ExerciseListViewModel
 import com.example.exercisetracker.presentation.metrics.MetricsViewModel
+import com.example.exercisetracker.presentation.review.ReviewViewModel
 import com.example.exercisetracker.presentation.workout.WorkoutSessionViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
@@ -45,4 +46,5 @@ val appModule = module {
     viewModelOf(::ExerciseListViewModel)
     viewModelOf(::WorkoutSessionViewModel)
     viewModelOf(::MetricsViewModel)
+    viewModelOf(::ReviewViewModel)
 }

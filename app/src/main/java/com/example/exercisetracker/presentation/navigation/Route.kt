@@ -13,5 +13,8 @@ sealed interface Route : NavKey {
     data object Workout : Route
 
     @Serializable
+    data class Review(val day: Int) : Route
+
+    @Serializable
     data object Metrics : Route
 }

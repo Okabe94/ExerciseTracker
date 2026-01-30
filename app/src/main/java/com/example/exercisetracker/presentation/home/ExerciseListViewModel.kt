@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -56,6 +57,7 @@ class ExerciseListViewModel(
         }
 
         ExerciseListState(
+            screenMode = internal.screenMode,
             workoutDaysDone = week,
             currentDay = clock.getCurrentDay(),
             muscleList = musclesAndExercises.first,
@@ -76,10 +78,21 @@ class ExerciseListViewModel(
 
     fun onAction(action: ExerciseListAction) {
         when (action) {
+            ExerciseListAction.OnStartWorkout -> startWorkout()
             is ExerciseListAction.OnAddMuscle -> addMuscle(action.name)
             is ExerciseListAction.OnAddExercise -> addExercise(action.name)
+            is ExerciseListAction.OnDayNodeSelected -> dayNodeAction(action.day)
+            is ExerciseListAction.OnShowConfirmDialog -> toggleConfirmDialog(action.show)
             is ExerciseListAction.OnMuscleSelected -> toggleMuscleSelection(action.muscleId)
             is ExerciseListAction.OnExerciseSelected -> toggleExerciseSelection(action.exerciseId)
+
+            ExerciseListAction.OnReturnToWorkout -> _internalState.update { state ->
+                state.copy(
+                    screenMode = ScreenMode.Workout,
+                    selectedExerciseIds = mutableSetOf(),
+                    selectedMuscleIds = mutableSetOf()
+                )
+            }
 
             is ExerciseListAction.OnShowExerciseDialog -> _internalState.update {
                 it.copy(exerciseDialogVisible = action.show)
@@ -89,54 +102,52 @@ class ExerciseListViewModel(
                 it.copy(muscleDialogVisible = action.show)
             }
 
-            ExerciseListAction.OnStartWorkout -> {
-                viewModelScope.launch {
-                    toggleConfirmDialog(false)
-                    workoutRepository.completeOpenSessions()
-                    workoutRepository.startNewSession(
-                        exercises = _internalState.value.selectedExerciseIds.toList()
-                    )
-                }
-            }
-
-            is ExerciseListAction.OnShowConfirmDialog -> toggleConfirmDialog(action.show)
-
-            is ExerciseListAction.OnDayNodeSelected -> {
-                val currentDay = clock.getCurrentDay()
-
-                when {
-                    currentDay > action.day -> {
-                        viewModelScope.launch {
-                            val reviewList = workoutRepository.getWorkoutReview(action.day)
-                            if (reviewList.isEmpty()) {
-                                _eventsChannel.trySend(
-                                    ExerciseListEvent.ErrorMessage(
-                                        UiText.StringResource(R.string.not_trained_this_day)
-                                    )
-                                )
-                            }
-                        }
-                        _internalState.update { state ->
-                            state.copy(screenMode = ScreenMode.REVIEWING)
-                        }
-                    }
-
-                    currentDay < action.day -> {
-                        _internalState.update { state ->
-                            state.copy(screenMode = ScreenMode.PLANNING)
-                        }
-                    }
-
-                    else -> {
-                        _internalState.update { state ->
-                            state.copy(screenMode = ScreenMode.WORKOUT)
-                        }
-                    }
-                }
-
-            }
-
             else -> Unit
+        }
+    }
+
+    private fun startWorkout() {
+        viewModelScope.launch {
+            toggleConfirmDialog(false)
+            workoutRepository.completeOpenSessions()
+            workoutRepository.startNewSession(
+                exercises = _internalState.value.selectedExerciseIds.toList()
+            )
+        }
+    }
+
+    private fun dayNodeAction(day: Int) {
+        val currentDay = clock.getCurrentDay()
+
+        when {
+            currentDay > day -> handlePreviousDay(day)
+
+            currentDay < day -> {
+                _internalState.update { state ->
+                    state.copy(screenMode = ScreenMode.Planning(day))
+                }
+            }
+
+            else -> _internalState.update { state ->
+                state.copy(screenMode = ScreenMode.Workout)
+            }
+        }
+    }
+
+    private fun handlePreviousDay(day: Int) {
+        viewModelScope.launch {
+            val doneDays = _workoutWeek.first()
+
+            if (doneDays.contains(day)) {
+                _eventsChannel.trySend(ExerciseListEvent.SendToReview(day))
+                return@launch
+            }
+
+            _eventsChannel.trySend(
+                ExerciseListEvent.ErrorMessage(
+                    reason = UiText.StringResource(id = R.string.not_trained_this_day)
+                )
+            )
         }
     }
 
@@ -193,7 +204,7 @@ class ExerciseListViewModel(
     }
 
     private data class InternalState(
-        val screenMode: ScreenMode = ScreenMode.WORKOUT,
+        val screenMode: ScreenMode = ScreenMode.Workout,
         val startWorkoutButtonVisible: Boolean = false,
         val muscleDialogVisible: Boolean = false,
         val exerciseDialogVisible: Boolean = false,
@@ -201,8 +212,4 @@ class ExerciseListViewModel(
         val selectedMuscleIds: MutableSet<Int> = mutableSetOf(),
         val selectedExerciseIds: MutableSet<Int> = mutableSetOf()
     )
-
-    private enum class ScreenMode {
-        WORKOUT, PLANNING, REVIEWING
-    }
 }

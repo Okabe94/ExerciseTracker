@@ -17,6 +17,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoField
 
@@ -76,12 +77,8 @@ class WorkoutRepository(
 
     override fun getWorkoutDays(): Flow<Set<Int>> {
         val zone = ZoneId.systemDefault()
-        val thisMonday = Instant.ofEpochMilli(clock.now())
-            .atZone(zone)
-            .with(ChronoField.DAY_OF_WEEK, 1)
-            .toLocalDate()
-            .atStartOfDay()
 
+        val thisMonday = getWeekDay(1)
         val nextMonday = thisMonday.plusWeeks(1)
 
         val thisMondayMillis = thisMonday.atZone(zone).toInstant().toEpochMilli()
@@ -111,19 +108,24 @@ class WorkoutRepository(
         )
     }
 
-    override suspend fun getWorkoutReview(day: Int): List<WorkoutReview> {
+    override suspend fun getWorkoutReview(day: Int): Flow<List<WorkoutReview>> {
         val zone = ZoneId.systemDefault()
-        val startOfDay = Instant.ofEpochMilli(clock.now())
-            .atZone(zone)
-            .with(ChronoField.DAY_OF_WEEK, day.toLong())
-            .toLocalDate()
-            .atStartOfDay()
 
+        val startOfDay = getWeekDay(day.toLong())
         val endOfDay = startOfDay.plusDays(1)
 
         val startMillis = startOfDay.atZone(zone).toInstant().toEpochMilli()
         val endMillis = endOfDay.atZone(zone).toInstant().toEpochMilli()
 
         return workoutDao.getWorkoutReview(startMillis, endMillis)
+    }
+
+    private fun getWeekDay(day: Long): LocalDateTime {
+        val zone = ZoneId.systemDefault()
+        return Instant.ofEpochMilli(clock.now())
+            .atZone(zone)
+            .with(ChronoField.DAY_OF_WEEK, day)
+            .toLocalDate()
+            .atStartOfDay()
     }
 }

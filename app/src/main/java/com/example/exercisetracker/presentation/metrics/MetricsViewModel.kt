@@ -136,9 +136,10 @@ class MetricsViewModel(
 
     private data class FilterState(
         val selectedExercise: Exercise? = null,
-        val timeSelected: TimeFilter = TimeFilter.ONE_MONTH,
+        val timeSelected: TimeFilter = TimeFilter.ONE_WEEK,
         val typeSelected: TypeFilter = TypeFilter.WEIGHT,
         val timeFilterOptions: List<TimeFilter> = listOf(
+            TimeFilter.ONE_WEEK,
             TimeFilter.ONE_MONTH,
             TimeFilter.THREE_MONTH,
             TimeFilter.SIX_MONTH,
