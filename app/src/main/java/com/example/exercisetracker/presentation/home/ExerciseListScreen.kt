@@ -4,6 +4,7 @@ package com.example.exercisetracker.presentation.home
 
 import android.content.res.Configuration
 import android.content.res.Configuration.UI_MODE_NIGHT_NO
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -85,8 +86,6 @@ import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.R
 import com.example.exercisetracker.core.presentation.util.ObserveAsEvents
-import com.example.exercisetracker.presentation.home.PrimaryButtonLayout
-import com.example.exercisetracker.presentation.home.SecondaryButtonLayout
 import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
@@ -150,7 +149,6 @@ fun ExerciseListScreen(
         topBar = {
             WorkoutWeekCalendar(
                 onDayNodeClick = { onAction(ExerciseListAction.OnDayNodeSelected(it)) },
-//                onBackClick = { onAction(ExerciseListAction.OnReturnToWorkout) },
                 workoutDays = state.workoutDaysDone,
                 currentDay = state.currentDay,
                 mode = state.screenMode
@@ -264,163 +262,47 @@ private fun WorkoutWeekCalendar(
 ) {
     val days = listOf("L", "M", "X", "J", "V", "S", "D")
 
+    val title = when (mode) {
+        is ScreenMode.Planning -> R.string.planning
+        ScreenMode.Workout -> R.string.activity_this_week
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
     ) {
-        WeekWorkoutMode(
-            onClick = onDayNodeClick,
-            screenMode = mode,
-            days = days,
-            workoutDays = workoutDays,
-            currentDay = currentDay
-        )
-    }
-}
-
-//@Composable
-//fun WeekPlanningMode(onBack: () -> Unit, day: String) {
-//    Row(
-//        modifier = Modifier.fillMaxWidth(),
-//        verticalAlignment = Alignment.CenterVertically,
-//        horizontalArrangement = Arrangement.Start
-//    ) {
-//        IconButton(onClick = onBack) {
-//            Icon(
-//                imageVector = ImageVector.vectorResource(R.drawable.outline_arrow_back_24),
-//                contentDescription = "back"
-//            )
-//        }
-//
-//        Text(
-//            text = stringResource(R.string.planning),
-//            style = MaterialTheme.typography.headlineMedium,
-//            color = MaterialTheme.colorScheme.onSurfaceVariant
-//        )
-//
-//        Spacer(modifier = Modifier.width(12.dp))
-//
-//        DayNode(
-//            onClick = {},
-//            dayName = day,
-//            isWorkoutDone = false,
-//            isToday = false,
-//            isWeekDone = false
-//        )
-//    }
-//}
-
-@Composable
-fun WeekWorkoutMode(
-    onClick: (Int) -> Unit,
-    screenMode: ScreenMode,
-    days: List<String>,
-    workoutDays: Set<Int>,
-    currentDay: Int
-) {
-    val title = when (screenMode) {
-        is ScreenMode.Planning -> R.string.planning
-        ScreenMode.Workout -> R.string.activity_this_week
-    }
-
-    Box {
-        Text(
-            text = stringResource(title),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        days.forEachIndexed { index, day ->
-            val dayNumber = index + 1
-            val isWorkoutDone = workoutDays.contains(dayNumber)
-            val isToday = dayNumber == currentDay
-            val isWeekDone = workoutDays.size >= 4
-
-            DayNode(
-                onClick = { onClick(dayNumber) },
-                dayName = day,
-                isPlanning = screenMode is ScreenMode.Planning && screenMode.day == dayNumber,
-                isWorkoutDone = isWorkoutDone,
-                isToday = isToday,
-                isWeekDone = isWeekDone
+        Box {
+            Text(
+                text = stringResource(title),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
 
-@Composable
-private fun DayNode(
-    onClick: () -> Unit,
-    dayName: String,
-    isPlanning: Boolean,
-    isWorkoutDone: Boolean,
-    isToday: Boolean,
-    isWeekDone: Boolean
-) {
-    val node = getDayNodeColors(isWorkoutDone, isToday, isWeekDone)
-    val alpha by rememberInfiniteTransition().animateFloat(
-        initialValue = 0.1f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
-    val planningBackground = if (isPlanning) {
-        Modifier
-            .background(
-                brush = Brush.linearGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.secondaryContainer
-                    ),
-                    tileMode = TileMode.Decal
-                ),
-                shape = RoundedCornerShape(5.dp),
-                alpha = alpha
-            )
-    } else {
-        Modifier
-    }
+        Spacer(modifier = Modifier.height(12.dp))
 
-    Column(
-        modifier = planningBackground
-            .then(Modifier.padding(4.dp)),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(color = node.backgroundColor)
-                .clickable { onClick() }
-                .border(
-                    width = node.borderSize,
-                    color = node.borderColor,
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            if (isWorkoutDone) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.outline_local_fire_department_24),
-                    contentDescription = null,
-                    tint = node.tintColor,
-                    modifier = Modifier.size(20.dp)
+            days.forEachIndexed { index, day ->
+                val dayNumber = index + 1
+                val isWorkoutDone = workoutDays.contains(dayNumber)
+                val isToday = dayNumber == currentDay
+                val isWeekDone = workoutDays.size >= 4
+
+                val node = getDayNode(
+                    text = day,
+                    isWorkoutDone = isWorkoutDone,
+                    isToday = isToday,
+                    isWeekDone = isWeekDone,
+                    isPlanned = mode is ScreenMode.Planning && mode.day == dayNumber
                 )
-            } else {
-                Text(
-                    text = dayName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = node.textColor
+
+                DayNode(
+                    onClick = { onDayNodeClick(dayNumber) },
+                    node = node
                 )
             }
         }
@@ -428,56 +310,46 @@ private fun DayNode(
 }
 
 @Composable
-private fun getDayNodeColors(
-    isWorkoutDone: Boolean,
-    isToday: Boolean,
-    isWeekDone: Boolean
-): DayNodeColors {
-    val backgroundColor = when {
-        isWeekDone && isWorkoutDone -> Gold500
-        isWorkoutDone -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+private fun DayNode(
+    onClick: () -> Unit,
+    node: BasicDayNode
+) {
+    Column(
+        modifier = node
+            .containerModifier()
+            .then(Modifier.padding(4.dp)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(color = node.backgroundColor())
+                .clickable { onClick() }
+                .border(
+                    width = node.borderSize,
+                    color = node.borderColor(),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center,
+            content = { node.GetNode() }
+        )
     }
-
-    val borderColor = when {
-        isWeekDone && isWorkoutDone -> Gold400
-        isWorkoutDone -> MaterialTheme.colorScheme.primary
-        isToday -> MaterialTheme.colorScheme.error
-        else -> Color.Transparent
-    }
-
-    val tintColor = when {
-        isWeekDone && isWorkoutDone -> Color.Black
-        else -> MaterialTheme.colorScheme.onPrimary
-    }
-
-    val textColor = when {
-        isToday -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    val borderSize = when {
-        isToday || isWeekDone -> 2.dp
-        else -> 0.dp
-    }
-
-    return DayNodeColors(
-        backgroundColor = backgroundColor,
-        borderColor = borderColor,
-        tintColor = tintColor,
-        textColor = textColor,
-        borderSize = borderSize
-    )
 }
 
-private data class DayNodeColors(
-    val backgroundColor: Color,
-    val borderColor: Color,
-    val tintColor: Color,
-    val textColor: Color,
-    val borderSize: Dp
-)
-
+private fun getDayNode(
+    text: String,
+    isWorkoutDone: Boolean,
+    isToday: Boolean,
+    isWeekDone: Boolean,
+    isPlanned: Boolean
+): BasicDayNode = when {
+    isPlanned -> PlannedWorkoutDayNode
+    isWeekDone && isWorkoutDone -> WeekAndWorkoutDayNode
+    isWorkoutDone -> WorkoutDayNode
+    isToday -> TodayDayNode(text)
+    else -> RegularDayNode(text)
+}
 
 @Composable
 private fun MuscleSection(
@@ -627,7 +499,7 @@ fun RowScope.PlanningActionButtons(
     onAction: (ExerciseListAction) -> Unit,
     state: ExerciseListState
 ) {
-    if (state.selectedExerciseIds.isEmpty()){
+    if (state.selectedExerciseIds.isEmpty()) {
         PrimaryButtonLayout(
             onClick = { onAction(ExerciseListAction.OnReturnToWorkout) }
         ) { ReturnToWorkoutButton() }
@@ -923,14 +795,11 @@ private suspend fun animateCheck(anim: Animatable<Float, AnimationVector1D>) {
 private fun DayNodesLightPreview() {
     ExerciseTrackerTheme {
         val data = mapOf(
-            "RD" to Triple(false, false, false),
-            "T" to Triple(false, true, false),
-            "WD TT" to Triple(true, false, false),
-            "WD T" to Triple(true, true, false),
-            "WC T" to Triple(false, true, true),
-            "WC RD" to Triple(false, false, true),
-            "WC TT" to Triple(true, false, true),
-            "WC WD TT" to Triple(true, false, true),
+            "Regular Day" to RegularDayNode("L"),
+            "Today" to TodayDayNode("L"),
+            "Workout" to WorkoutDayNode,
+            "Week workout" to WeekAndWorkoutDayNode,
+            "Planned" to PlannedWorkoutDayNode
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
             data.forEach { (key, value) ->
@@ -941,11 +810,7 @@ private fun DayNodesLightPreview() {
                     )
                     DayNode(
                         onClick = {},
-                        isPlanning = true,
-                        dayName = "L",
-                        isWorkoutDone = value.first,
-                        isToday = value.second,
-                        isWeekDone = value.third
+                        node = value
                     )
                 }
             }
