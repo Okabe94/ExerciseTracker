@@ -2,6 +2,6 @@ package com.example.exercisetracker.domain.model
 
 data class WorkoutPlan(
     val id: Int = 0,
-    val date: Long,
-    val exercises: String
+    val day: Int,
+    val exercises: List<Int>
 )

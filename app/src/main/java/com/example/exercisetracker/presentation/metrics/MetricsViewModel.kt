@@ -77,7 +77,7 @@ class MetricsViewModel(
             } else {
                 it.reps.toFloat()
             }
-            val description = clock.getDateLabel(it.startTime)
+            val description = clock.getDateLabelFromMillis(it.startTime)
             GraphPoints(value, description)
         }
 

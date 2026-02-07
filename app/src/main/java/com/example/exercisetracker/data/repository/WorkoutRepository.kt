@@ -86,11 +86,7 @@ class WorkoutRepository(
 
         return workoutDao.getWorkoutDays(thisMondayMillis, nextMondayMillis)
             .map { list ->
-                list.map { millis ->
-                    Instant.ofEpochMilli(millis)
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate().dayOfWeek.value
-                }.toSet()
+                list.map { millis -> clock.getDayNumberFromMillis(millis) }.toSet()
             }
     }
 
@@ -99,7 +95,7 @@ class WorkoutRepository(
         exerciseId: Int
     ): Flow<List<MetricGraphData>> {
         val now = clock.now()
-        val then = clock.millisThen(timeFilter)
+        val then = clock.getMillisFromFilter(timeFilter)
 
         return workoutDao.getGraphData(
             startTime = then,

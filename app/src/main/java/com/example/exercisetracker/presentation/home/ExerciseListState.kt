@@ -6,6 +6,7 @@ import com.example.exercisetracker.domain.model.Muscle
 data class ExerciseListState(
     val screenMode: ScreenMode = ScreenMode.Workout,
     val workoutDaysDone: Set<Int> = emptySet(),
+    val plannedWorkouts: Set<Int> = emptySet(),
     val currentDay: Int = 0,
     val searchQuery: String = "",
     val hasActiveWorkout: Boolean = false,

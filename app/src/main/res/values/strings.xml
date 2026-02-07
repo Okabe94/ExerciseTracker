@@ -12,8 +12,10 @@
     <string name="no_exercises_found">No se encontraron ejercicios para este músculo</string>
     <string name="no_muscles_found">No se encontraron músculos</string>
     <string name="return_to_workout">Regresar</string>
-    <string name="save_workout">Agendar</string>
+    <string name="save_workout">Guardar</string>
+    <string name="update_workout">Actualizar</string>
     <string name="workout">Entrenar</string>
+    <string name="delete">Borrar</string>
     <string name="resume">Reanudar</string>
     <string name="finish">Finalizar</string>
     <string name="weight">Peso</string>
@@ -39,4 +41,5 @@
     <string name="est_1rm">1RM Est.</string>
     <string name="kg">Kg</string>
     <string name="not_trained_this_day">Vago hp, no entrenaste</string>
+    <string name="saved_workout_message">Entreno guardado</string>
 </resources>

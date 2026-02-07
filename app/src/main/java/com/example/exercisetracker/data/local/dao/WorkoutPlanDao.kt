@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WorkoutPlanDao {
+    @Query("SELECT * FROM workout_plan WHERE date >= :startDate")
+    fun getWeekWorkoutPlans(startDate: Long): Flow<List<WorkoutPlanEntity>>
+
     @Query("SELECT * FROM workout_plan")
     fun getAllWorkoutPlans(): Flow<List<WorkoutPlanEntity>>
 

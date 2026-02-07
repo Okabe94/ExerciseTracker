@@ -7,7 +7,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -19,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.Dp
@@ -99,8 +102,8 @@ data class TodayDayNode(val day: String) : TextDayNodeVisuals(
     text = day,
     containerModifier = { Modifier },
     backgroundColor = { MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f) },
-    borderColor = { MaterialTheme.colorScheme.error },
-    textColor = { MaterialTheme.colorScheme.primary },
+    borderColor = { MaterialTheme.colorScheme.primary },
+    textColor = { MaterialTheme.colorScheme.onSurfaceVariant },
     borderSize = 2.dp,
 )
 
@@ -124,6 +127,15 @@ data object WeekAndWorkoutDayNode : IconDayNodeVisuals(
 
 data object PlannedWorkoutDayNode : IconDayNodeVisuals(
     icon = R.drawable.outline_calendar_month_24,
+    containerModifier = { Modifier },
+    backgroundColor = { MaterialTheme.colorScheme.surfaceVariant },
+    borderColor = { MaterialTheme.colorScheme.onSurfaceVariant },
+    tintColor = { MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f) },
+    borderSize = 2.dp,
+)
+
+data object PlanningWorkoutDayNode : IconDayNodeVisuals(
+    icon = R.drawable.outline_calendar_month_24,
     containerModifier = {
         val alpha by rememberInfiniteTransition().animateFloat(
             initialValue = 0f,
@@ -135,6 +147,9 @@ data object PlannedWorkoutDayNode : IconDayNodeVisuals(
         )
 
         Modifier
+            .graphicsLayer {
+                rotationY = 360f * alpha * 2
+            }
             .background(
                 brush = Brush.linearGradient(
                     listOf(
@@ -148,8 +163,8 @@ data object PlannedWorkoutDayNode : IconDayNodeVisuals(
             )
     },
     backgroundColor = { MaterialTheme.colorScheme.surfaceVariant },
-    borderColor = { MaterialTheme.colorScheme.inverseSurface },
-    tintColor = { MaterialTheme.colorScheme.onSurfaceVariant },
+    borderColor = { MaterialTheme.colorScheme.primary },
+    tintColor = { MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f) },
     borderSize = 2.dp,
 )
 

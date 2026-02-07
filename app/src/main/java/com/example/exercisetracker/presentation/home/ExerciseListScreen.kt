@@ -4,15 +4,9 @@ package com.example.exercisetracker.presentation.home
 
 import android.content.res.Configuration
 import android.content.res.Configuration.UI_MODE_NIGHT_NO
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -37,9 +31,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonShapes
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -69,9 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -81,7 +73,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.AndroidUiModes.UI_MODE_NIGHT_YES
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.R
@@ -89,8 +80,6 @@ import com.example.exercisetracker.core.presentation.util.ObserveAsEvents
 import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
-import com.example.exercisetracker.ui.theme.Gold400
-import com.example.exercisetracker.ui.theme.Gold500
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -126,7 +115,7 @@ fun ExerciseListScreen(
     events: Flow<ExerciseListEvent>,
     state: ExerciseListState,
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -134,13 +123,22 @@ fun ExerciseListScreen(
         when (event) {
             is ExerciseListEvent.ErrorMessage -> showSnackBarMessage(
                 scope = scope,
-                hostState = snackbarHostState,
+                hostState = snackState,
                 message = event.reason.asString(context)
             )
 
             is ExerciseListEvent.SendToReview -> onAction(
                 ExerciseListAction.OnNavigateToReview(event.day)
             )
+
+            is ExerciseListEvent.WorkoutSaved -> {
+                showSnackBarMessage(
+                    scope = scope,
+                    hostState = snackState,
+                    message = context.getString(R.string.saved_workout_message)
+                )
+
+            }
         }
     }
 
@@ -150,12 +148,13 @@ fun ExerciseListScreen(
             WorkoutWeekCalendar(
                 onDayNodeClick = { onAction(ExerciseListAction.OnDayNodeSelected(it)) },
                 workoutDays = state.workoutDaysDone,
+                plannedDays = state.plannedWorkouts,
                 currentDay = state.currentDay,
                 mode = state.screenMode
             )
         },
         snackbarHost = {
-            SnackbarHost(snackbarHostState) {
+            SnackbarHost(snackState) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -257,6 +256,7 @@ fun ExerciseListScreen(
 private fun WorkoutWeekCalendar(
     onDayNodeClick: (Int) -> Unit,
     workoutDays: Set<Int>,
+    plannedDays: Set<Int>,
     currentDay: Int,
     mode: ScreenMode
 ) {
@@ -290,6 +290,7 @@ private fun WorkoutWeekCalendar(
                 val dayNumber = index + 1
                 val isWorkoutDone = workoutDays.contains(dayNumber)
                 val isToday = dayNumber == currentDay
+                val isPlanned = plannedDays.contains(dayNumber) && dayNumber > currentDay
                 val isWeekDone = workoutDays.size >= 4
 
                 val node = getDayNode(
@@ -297,13 +298,27 @@ private fun WorkoutWeekCalendar(
                     isWorkoutDone = isWorkoutDone,
                     isToday = isToday,
                     isWeekDone = isWeekDone,
-                    isPlanned = mode is ScreenMode.Planning && mode.day == dayNumber
+                    isPlanned = isPlanned,
+                    isPlanning = mode is ScreenMode.Planning && mode.day == dayNumber
                 )
 
-                DayNode(
-                    onClick = { onDayNodeClick(dayNumber) },
-                    node = node
-                )
+                Column {
+                    DayNode(
+                        onClick = { onDayNodeClick(dayNumber) },
+                        node = node
+                    )
+                    // Day selected box
+                    if (dayNumber == 3) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .padding(8.dp)
+                                .width(20.dp)
+                                .height(2.dp)
+                                .background(Color.White)
+                        )
+                    }
+                }
             }
         }
     }
@@ -342,9 +357,11 @@ private fun getDayNode(
     isWorkoutDone: Boolean,
     isToday: Boolean,
     isWeekDone: Boolean,
-    isPlanned: Boolean
+    isPlanned: Boolean,
+    isPlanning: Boolean
 ): BasicDayNode = when {
     isPlanned -> PlannedWorkoutDayNode
+    isPlanning -> PlanningWorkoutDayNode
     isWeekDone && isWorkoutDone -> WeekAndWorkoutDayNode
     isWorkoutDone -> WorkoutDayNode
     isToday -> TodayDayNode(text)
@@ -482,8 +499,7 @@ private fun ActionsSection(
     state: ExerciseListState
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
     ) {
@@ -501,16 +517,31 @@ fun RowScope.PlanningActionButtons(
 ) {
     if (state.selectedExerciseIds.isEmpty()) {
         PrimaryButtonLayout(
-            onClick = { onAction(ExerciseListAction.OnReturnToWorkout) }
-        ) { ReturnToWorkoutButton() }
+            modifier = Modifier.weight(1f),
+            onClick = { onAction(ExerciseListAction.OnReturnToWorkout) },
+            content = { ReturnToWorkoutButton() }
+        )
     } else {
+        val isUpdate =
+            state.screenMode is ScreenMode.Planning && state.screenMode.day in state.plannedWorkouts
         SecondaryButtonLayout(
-            onClick = { onAction(ExerciseListAction.OnReturnToWorkout) }
-        ) { ReturnToWorkoutButton() }
+            modifier = Modifier.weight(1f),
+            onClick = { onAction(ExerciseListAction.OnReturnToWorkout) },
+            content = { ReturnToWorkoutButton() }
+        )
+
         PrimaryButtonLayout(
-            onClick = { onAction(ExerciseListAction.OnSaveWorkout) }
-        ) { SaveWorkoutButton() }
+            modifier = Modifier.weight(1f),
+            onClick = { onAction(ExerciseListAction.OnSaveWorkout) },
+            content = { SaveWorkoutButton(isUpdate) }
+        )
     }
+
+    PrimaryButtonLayout(
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+        onClick = { onAction(ExerciseListAction.OnSaveWorkout) },
+        content = { DeletePlannedWorkoutButton() }
+    )
 }
 
 @Composable
@@ -518,49 +549,66 @@ fun RowScope.WorkoutActionButtons(
     onAction: (ExerciseListAction) -> Unit,
     state: ExerciseListState
 ) {
-    if (state.hasActiveWorkout && state.selectedExerciseIds.isEmpty()) {
-        PrimaryButtonLayout(
-            onClick = { onAction(ExerciseListAction.OnResumeWorkout) }
-        ) { ResumeWorkoutButton() }
-    } else if (state.hasActiveWorkout) {
-        SecondaryButtonLayout(
-            onClick = { onAction(ExerciseListAction.OnShowConfirmDialog(true)) }
-        ) { StartWorkoutButton() }
-        PrimaryButtonLayout(
-            onClick = { onAction(ExerciseListAction.OnResumeWorkout) }
-        ) { ResumeWorkoutButton() }
-    } else if (state.selectedExerciseIds.isNotEmpty()) {
-        PrimaryButtonLayout(
-            onClick = { onAction(ExerciseListAction.OnStartWorkout) }
-        ) { StartWorkoutButton() }
+    when {
+        state.hasActiveWorkout && state.selectedExerciseIds.isEmpty() -> {
+            PrimaryButtonLayout(
+                modifier = Modifier.weight(1f),
+                onClick = { onAction(ExerciseListAction.OnResumeWorkout) },
+                content = { ResumeWorkoutButton() }
+            )
+        }
+
+        state.hasActiveWorkout -> {
+            SecondaryButtonLayout(
+                modifier = Modifier.weight(1f),
+                onClick = { onAction(ExerciseListAction.OnShowConfirmDialog(true)) },
+                content = { StartWorkoutButton() }
+            )
+
+            PrimaryButtonLayout(
+                modifier = Modifier.weight(1f),
+                onClick = { onAction(ExerciseListAction.OnResumeWorkout) },
+                content = { ResumeWorkoutButton() }
+            )
+        }
+
+        state.selectedExerciseIds.isNotEmpty() -> {
+            PrimaryButtonLayout(
+                modifier = Modifier.weight(1f),
+                onClick = { onAction(ExerciseListAction.OnStartWorkout) },
+                content = { StartWorkoutButton() }
+            )
+        }
     }
 }
 
 @Composable
-private fun RowScope.PrimaryButtonLayout(
+private fun PrimaryButtonLayout(
     modifier: Modifier = Modifier,
+    containerColor: Color = Color.Unspecified,
     onClick: () -> Unit,
     content: @Composable RowScope.() -> Unit
 ) {
     FilledTonalButton(
-        modifier = modifier.weight(1f),
+        modifier = modifier,
         shapes = ButtonShapes(
             shape = MaterialTheme.shapes.medium,
             pressedShape = MaterialTheme.shapes.extraLarge
         ),
+        colors = ButtonDefaults.filledTonalButtonColors(containerColor = containerColor),
         onClick = onClick,
         content = content
     )
 }
 
 @Composable
-private fun RowScope.SecondaryButtonLayout(
+private fun SecondaryButtonLayout(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     content: @Composable RowScope.() -> Unit
 ) {
     OutlinedButton(
-        modifier = modifier.weight(1f),
+        modifier = modifier,
         shapes = ButtonShapes(
             shape = MaterialTheme.shapes.medium,
             pressedShape = MaterialTheme.shapes.extraLarge
@@ -571,27 +619,34 @@ private fun RowScope.SecondaryButtonLayout(
 }
 
 @Composable
-private fun SaveWorkoutButton() {
+private fun IconTextActionButton(icon: ImageVector, text: String) {
     Icon(
-        imageVector = ImageVector.vectorResource(R.drawable.outline_calendar_month_24),
+        imageVector = icon,
         contentDescription = null
     )
     Spacer(Modifier.width(8.dp))
     Text(
         modifier = Modifier.padding(vertical = 8.dp),
-        text = stringResource(id = R.string.save_workout)
+        text = text
+    )
+}
+
+@Composable
+private fun SaveWorkoutButton(isUpdate: Boolean) {
+    val text =
+        if (isUpdate) R.string.update_workout
+        else R.string.save_workout
+
+    IconTextActionButton(
+        icon = ImageVector.vectorResource(R.drawable.outline_calendar_month_24),
+        text = stringResource(text)
     )
 }
 
 @Composable
 private fun ReturnToWorkoutButton() {
-    Icon(
-        imageVector = ImageVector.vectorResource(R.drawable.outline_chevron_backward_24),
-        contentDescription = null
-    )
-    Spacer(Modifier.width(8.dp))
-    Text(
-        modifier = Modifier.padding(vertical = 8.dp),
+    IconTextActionButton(
+        icon = ImageVector.vectorResource(R.drawable.outline_chevron_backward_24),
         text = stringResource(id = R.string.return_to_workout)
     )
 }
@@ -607,14 +662,19 @@ private fun ResumeWorkoutButton() {
 }
 
 @Composable
-private fun StartWorkoutButton() {
+private fun DeletePlannedWorkoutButton() {
     Icon(
-        imageVector = ImageVector.vectorResource(R.drawable.outline_exercise_24),
-        contentDescription = null
+        modifier = Modifier.padding(vertical = 6.dp),
+        imageVector = ImageVector.vectorResource(R.drawable.outline_delete_24),
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onTertiaryContainer
     )
-    Spacer(Modifier.width(8.dp))
-    Text(
-        modifier = Modifier.padding(vertical = 8.dp),
+}
+
+@Composable
+private fun StartWorkoutButton() {
+    IconTextActionButton(
+        icon = ImageVector.vectorResource(R.drawable.outline_exercise_24),
         text = stringResource(id = R.string.workout)
     )
 }
@@ -799,7 +859,8 @@ private fun DayNodesLightPreview() {
             "Today" to TodayDayNode("L"),
             "Workout" to WorkoutDayNode,
             "Week workout" to WeekAndWorkoutDayNode,
-            "Planned" to PlannedWorkoutDayNode
+            "Planned" to PlannedWorkoutDayNode,
+            "Planning" to PlanningWorkoutDayNode
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
             data.forEach { (key, value) ->
@@ -833,8 +894,9 @@ private fun ExerciseListScreenPreview() {
                 onAction = {},
                 events = flowOf(),
                 state = ExerciseListState(
+                    screenMode = ScreenMode.Planning(7),
                     hasActiveWorkout = false,
-                    selectedExerciseIds = listOf(1)
+                    selectedExerciseIds = emptyList()
                 )
             )
         }

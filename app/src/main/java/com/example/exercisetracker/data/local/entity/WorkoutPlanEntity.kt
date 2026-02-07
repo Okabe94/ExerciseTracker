@@ -8,5 +8,5 @@ data class WorkoutPlanEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val date: Long,
-    val exercises: String
+    val exercises: List<Int>
 )

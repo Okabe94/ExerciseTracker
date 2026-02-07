@@ -39,9 +39,9 @@ fun WorkoutSetEntity.toDomain() = WorkoutSet(
     reps = reps
 )
 
-fun WorkoutPlanEntity.toDomain() = WorkoutPlan(
+fun WorkoutPlanEntity.toDomain(day: Int) = WorkoutPlan(
     id = id,
-    date = date,
+    day = day,
     exercises = exercises
 )
 
@@ -73,8 +73,9 @@ fun WorkoutSet.toEntity() = WorkoutSetEntity(
     reps = reps
 )
 
-fun WorkoutPlan.toEntity() = WorkoutPlanEntity(
+fun WorkoutPlan.toEntity(millis: Long) = WorkoutPlanEntity(
     id = id,
-    date = date,
+    date = millis,
     exercises = exercises
 )
+
