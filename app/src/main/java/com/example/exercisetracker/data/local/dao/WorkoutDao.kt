@@ -8,6 +8,7 @@ import androidx.room.Update
 import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 import com.example.exercisetracker.data.local.entity.WorkoutSetEntity
 import com.example.exercisetracker.data.local.model.MetricGraphData
+import com.example.exercisetracker.data.local.model.ReviewExercises
 import com.example.exercisetracker.data.local.model.WorkoutReview
 import kotlinx.coroutines.flow.Flow
 
@@ -60,6 +61,9 @@ interface WorkoutDao {
     )
     fun getWorkoutReview(startTime: Long, endTime: Long): Flow<List<WorkoutReview>>
 
+    @Query("SELECT exercises FROM workout_sessions WHERE startTime >= :startTime AND startTime <= :endTime")
+    fun getWorkoutReviewExercises(startTime: Long, endTime: Long): Flow<List<ReviewExercises>>
+
     @Query("SELECT * FROM workout_sets WHERE sessionId = (SELECT id FROM workout_sessions WHERE isCompleted = 0 ORDER BY startTime DESC LIMIT 1)")
     fun getLastActiveSessionSets(): Flow<List<WorkoutSetEntity>>
 
@@ -68,4 +72,7 @@ interface WorkoutDao {
 
     @Query("SELECT startTime, weight, reps FROM workout_sessions INNER JOIN workout_sets ON workout_sessions.id = workout_sets.sessionId WHERE isCompleted = 1 AND startTime BETWEEN :startTime AND :endTime AND exerciseId = :exerciseId ORDER BY startTime ASC")
     fun getGraphData(startTime: Long, endTime: Long, exerciseId: Int): Flow<List<MetricGraphData>>
+
+    @Query("DELETE FROM workout_sessions WHERE startTime >= :startTime AND startTime <= :endTime ")
+    suspend fun deleteWorkoutSession(startTime: Long, endTime: Long)
 }

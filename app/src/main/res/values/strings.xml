@@ -8,11 +8,12 @@
     <string name="add_exercise">Añadir ejercicio</string>
     <string name="exercise_name">Nombre del ejercicio</string>
     <string name="add">Añadir</string>
-    <string name="Cancel">Cancelar</string>
+    <string name="cancel">Cancelar</string>
     <string name="no_exercises_found">No se encontraron ejercicios para este músculo</string>
     <string name="no_muscles_found">No se encontraron músculos</string>
     <string name="return_to_workout">Regresar</string>
     <string name="save_workout">Guardar</string>
+    <string name="redo_workout">Repetir</string>
     <string name="update_workout">Actualizar</string>
     <string name="workout">Entrenar</string>
     <string name="delete">Borrar</string>
@@ -32,7 +33,7 @@
     <string name="six_months">6 Meses</string>
     <string name="one_year">1 Año</string>
     <string name="everything">Todo</string>
-    <string name="activity_this_week">Actividad esta semana</string>
+    <string name="activity_this_week">Actividad pasada</string>
     <string name="planning">Planeando día</string>
     <string name="select_exercise">Seleccionar Ejercicio</string>
     <string name="choose_an_exercise">Escoger un ejercicio…</string>
@@ -42,4 +43,12 @@
     <string name="kg">Kg</string>
     <string name="not_trained_this_day">Vago hp, no entrenaste</string>
     <string name="saved_workout_message">Entreno guardado</string>
+    <string name="updated_workout_message">Entreno actualizado</string>
+    <string name="deleted_workout_message">Entreno eliminado</string>
+    <string name="generic_error">Error</string>
+    <string name="delete_workout_plan_dialog_title">Eliminar entreno agendado</string>
+    <string name="delete_workout_dialog_title">Eliminar entreno de este día</string>
+    <string name="delete_workout_plan_dialog_message">Se eliminará el entreno que está agendado para este día y no se podrá recuperar.</string>
+    <string name="delete_workout_dialog_message">Se eliminará el entreno que sucedió este día y no se podrá recuperar.</string>
+    <string name="delete_workout_plan_dialog_delete_action">Eliminar</string>
 </resources>

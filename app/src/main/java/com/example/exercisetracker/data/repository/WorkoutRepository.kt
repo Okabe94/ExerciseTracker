@@ -76,17 +76,15 @@ class WorkoutRepository(
     }
 
     override fun getWorkoutDays(): Flow<Set<Int>> {
-        val zone = ZoneId.systemDefault()
-
-        val thisMonday = getWeekDay(1)
+        val thisMonday = getDayOfWeek(1)
         val nextMonday = thisMonday.plusWeeks(1)
 
-        val thisMondayMillis = thisMonday.atZone(zone).toInstant().toEpochMilli()
-        val nextMondayMillis = nextMonday.atZone(zone).toInstant().toEpochMilli()
+        val thisMondayMillis = thisMonday.toMillis()
+        val nextMondayMillis = nextMonday.toMillis()
 
         return workoutDao.getWorkoutDays(thisMondayMillis, nextMondayMillis)
             .map { list ->
-                list.map { millis -> clock.getDayNumberFromMillis(millis) }.toSet()
+                list.map { millis -> clock.getDayOfWeekFromMillis(millis) }.toSet()
             }
     }
 
@@ -105,18 +103,44 @@ class WorkoutRepository(
     }
 
     override suspend fun getWorkoutReview(day: Int): Flow<List<WorkoutReview>> {
-        val zone = ZoneId.systemDefault()
-
-        val startOfDay = getWeekDay(day.toLong())
+        val startOfDay = getDayOfWeek(day.toLong())
         val endOfDay = startOfDay.plusDays(1)
 
-        val startMillis = startOfDay.atZone(zone).toInstant().toEpochMilli()
-        val endMillis = endOfDay.atZone(zone).toInstant().toEpochMilli()
+        val startOfDayMillis = startOfDay.toMillis()
+        val endOfDayMillis = endOfDay.toMillis()
 
-        return workoutDao.getWorkoutReview(startMillis, endMillis)
+        return workoutDao.getWorkoutReview(startOfDayMillis, endOfDayMillis)
     }
 
-    private fun getWeekDay(day: Long): LocalDateTime {
+    override suspend fun getWorkoutReviewExercises(day: Int): Flow<Set<Int>> {
+        val startOfDay = getDayOfWeek(day.toLong())
+        val endOfDay = startOfDay.plusDays(1)
+
+        val startOfDayMillis = startOfDay.toMillis()
+        val endOfDayMillis = endOfDay.toMillis()
+        return workoutDao.getWorkoutReviewExercises(startOfDayMillis, endOfDayMillis).map { reviews ->
+            reviews.map { review ->
+                review.exercises.map { it }
+            }.flatten().toSet()
+        }
+    }
+
+    override suspend fun deleteWorkoutSession(day: Int) {
+        val startOfDay = getDayOfWeek(day.toLong())
+        val endOfDay = startOfDay.plusDays(1)
+
+        val startOfDayMillis = startOfDay.toMillis()
+        val endOfDayMillis = endOfDay.toMillis()
+
+        workoutDao.deleteWorkoutSession(startOfDayMillis, endOfDayMillis)
+    }
+
+    private fun LocalDateTime.toMillis(): Long {
+        val zone = ZoneId.systemDefault()
+        return this.atZone(zone).toInstant().toEpochMilli()
+    }
+
+    private fun getDayOfWeek(day: Long): LocalDateTime {
         val zone = ZoneId.systemDefault()
         return Instant.ofEpochMilli(clock.now())
             .atZone(zone)

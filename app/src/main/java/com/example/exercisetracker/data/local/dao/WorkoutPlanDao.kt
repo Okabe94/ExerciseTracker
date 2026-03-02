@@ -26,6 +26,12 @@ interface WorkoutPlanDao {
     @Update
     suspend fun updateWorkoutPlan(workoutPlan: WorkoutPlanEntity)
 
+    @Query("UPDATE workout_plan SET exercises = :newExercises WHERE date >= :startDate AND date <= :endDate")
+    suspend fun updateWorkoutPlan(startDate: Long, endDate: Long, newExercises: List<Int>)
+
+    @Query("DELETE FROM workout_plan WHERE date >= :startDate AND date <= :endDate")
+    suspend fun deleteWorkoutPlan(startDate: Long, endDate: Long)
+
     @Delete
     suspend fun deleteWorkoutPlan(workoutPlan: WorkoutPlanEntity)
 }

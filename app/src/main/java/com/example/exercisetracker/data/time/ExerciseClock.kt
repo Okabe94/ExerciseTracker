@@ -13,53 +13,54 @@ class ExerciseClock(
     private val timeZone: AppTimeZone
 ) : AppClock {
 
-    override fun now(): Long = 1772600400000
-//        System.currentTimeMillis()
+    private val dateLabelFormatter = DateTimeFormatter.ofPattern("dd/MMM")
 
-    override fun getDayNumberFromMillis(millis: Long): Int = defaultZonedDate(millis)
+    override fun now(): Long = System.currentTimeMillis()
+
+    override fun getCurrentDayOfWeek(): Int = getDayOfWeekFromMillis(now())
+
+    override fun getDayOfWeekFromMillis(millis: Long): Int = zonedDateTimeFromMillis(millis)
         .toLocalDate()
         .dayOfWeek
         .value
 
-    override fun getCurrentNumberDay(): Int = getDayNumberFromMillis(now())
-
-    override fun getDateLabelFromMillis(millis: Long): String {
-        val formatter = DateTimeFormatter.ofPattern("dd/MMM")
-        return defaultZonedDate(millis).format(formatter)
+    override fun getMillisForStartOfDayInWeek(dayOfWeek: Int): Long {
+        val currentDayOfWeek = getCurrentDayOfWeek()
+        val daysFromToday = dayOfWeek - currentDayOfWeek
+        return getStartOfDayMillisWithOffsetFromToday(daysFromToday)
     }
+
+    override fun getDateLabelFromMillis(millis: Long): String =
+        zonedDateTimeFromMillis(millis).format(dateLabelFormatter)
 
     override fun getMillisFromFilter(timeFilter: TimeFilter): Long {
-        val now = defaultZonedDate()
-            .withHour(0)
-            .withMinute(0)
-            .withSecond(0)
-            .withNano(0)
+        if (timeFilter == TimeFilter.ALL) return 0L
 
-        return when (timeFilter) {
-            TimeFilter.ALL -> 0L
-            TimeFilter.ONE_WEEK -> now.minusWeeks(1).toInstant().toEpochMilli()
-            TimeFilter.ONE_MONTH -> now.minusMonths(1).toInstant().toEpochMilli()
-            TimeFilter.THREE_MONTH -> now.minusMonths(3).toInstant().toEpochMilli()
-            TimeFilter.SIX_MONTH -> now.minusMonths(6).toInstant().toEpochMilli()
-            TimeFilter.ONE_YEAR -> now.minusMonths(12).toInstant().toEpochMilli()
+        val startOfToday = zonedDateTimeFromMillis()
+            .toLocalDate()
+            .atStartOfDay(timeZone.getTimeZone())
+
+        val resultZonedDateTime = when (timeFilter) {
+            TimeFilter.ONE_WEEK -> startOfToday.minusWeeks(1)
+            TimeFilter.ONE_MONTH -> startOfToday.minusMonths(1)
+            TimeFilter.THREE_MONTH -> startOfToday.minusMonths(3)
+            TimeFilter.SIX_MONTH -> startOfToday.minusMonths(6)
+            TimeFilter.ONE_YEAR -> startOfToday.minusYears(1)
+            else -> return 0L
         }
+
+        return resultZonedDateTime.toInstant().toEpochMilli()
     }
 
-    override fun getMillisAtStartOfDay(daysFromToday: Int): Long = defaultZonedDate()
-        .withHour(0)
-        .withMinute(0)
-        .withSecond(0)
-        .withNano(0)
-        .plusDays(daysFromToday.toLong())
-        .toInstant()
-        .toEpochMilli()
-
-    override fun getMillisForDay(daysFromToday: Int): Long = defaultZonedDate()
-        .plusDays(daysFromToday.toLong())
-        .toInstant()
-        .toEpochMilli()
-
-    private fun defaultZonedDate(millis: Long = now()) = Instant
+    private fun zonedDateTimeFromMillis(millis: Long = now()) = Instant
         .ofEpochMilli(millis)
         .atZone(timeZone.getTimeZone())
+
+    private fun getStartOfDayMillisWithOffsetFromToday(offsetInDays: Int): Long =
+        zonedDateTimeFromMillis()
+            .toLocalDate()
+            .atStartOfDay(timeZone.getTimeZone())
+            .plusDays(offsetInDays.toLong())
+            .toInstant()
+            .toEpochMilli()
 }

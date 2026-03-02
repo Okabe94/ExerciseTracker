@@ -1,0 +1,8 @@
+/**
+ * Cambiar librería de gráficas
+ * Eliminar sets desde gráfica
+ *
+ * Añadir broadcast receiver del día y arreglar flows para que lo usen
+ * Cambiar filtros de músculos
+ * Cambiar flujos de añadido de ejercicios (siempre visible)
+ */

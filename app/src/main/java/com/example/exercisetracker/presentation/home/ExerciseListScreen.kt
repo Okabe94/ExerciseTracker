@@ -2,11 +2,14 @@
 
 package com.example.exercisetracker.presentation.home
 
+import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Configuration.UI_MODE_NIGHT_NO
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -14,6 +17,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.R
 import com.example.exercisetracker.core.presentation.util.ObserveAsEvents
+import com.example.exercisetracker.presentation.home.ExerciseListAction.*
 import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
@@ -99,10 +106,10 @@ fun ExerciseListRoot(
         onAction = {
             viewModel.onAction(it)
             when (it) {
-                is ExerciseListAction.OnStartWorkout,
-                is ExerciseListAction.OnResumeWorkout -> navigator.navigate(Route.Workout)
+                is OnStartWorkout,
+                is OnResumeWorkout -> navigator.navigate(Route.Workout)
 
-                is ExerciseListAction.OnNavigateToReview -> navigator.navigate(Route.Review(it.day))
+                is OnNavigateToReview -> navigator.navigate(Route.Review(it.day))
                 else -> Unit
             }
         }
@@ -120,36 +127,18 @@ fun ExerciseListScreen(
     val scope = rememberCoroutineScope()
 
     ObserveAsEvents(events) { event ->
-        when (event) {
-            is ExerciseListEvent.ErrorMessage -> showSnackBarMessage(
-                scope = scope,
-                hostState = snackState,
-                message = event.reason.asString(context)
-            )
-
-            is ExerciseListEvent.SendToReview -> onAction(
-                ExerciseListAction.OnNavigateToReview(event.day)
-            )
-
-            is ExerciseListEvent.WorkoutSaved -> {
-                showSnackBarMessage(
-                    scope = scope,
-                    hostState = snackState,
-                    message = context.getString(R.string.saved_workout_message)
-                )
-
-            }
-        }
+        handleEvents(onAction, event, snackState, context, scope)
     }
 
     Scaffold(
         modifier = Modifier.padding(16.dp),
         topBar = {
             WorkoutWeekCalendar(
-                onDayNodeClick = { onAction(ExerciseListAction.OnDayNodeSelected(it)) },
+                onDayNodeClick = { onAction(OnDayNodeSelected(it)) },
                 workoutDays = state.workoutDaysDone,
                 plannedDays = state.plannedWorkouts,
                 currentDay = state.currentDay,
+                daySelected = state.daySelected,
                 mode = state.screenMode
             )
         },
@@ -187,8 +176,8 @@ fun ExerciseListScreen(
                 AddNameDialog(
                     title = stringResource(R.string.add_exercise),
                     label = stringResource(R.string.exercise_name),
-                    onDismiss = { onAction(ExerciseListAction.OnShowExerciseDialog(false)) },
-                    onConfirm = { name -> onAction(ExerciseListAction.OnAddExercise(name)) }
+                    onDismiss = { onAction(OnShowExerciseDialog(false)) },
+                    onConfirm = { name -> onAction(OnAddExercise(name)) }
                 )
             }
 
@@ -196,17 +185,35 @@ fun ExerciseListScreen(
                 AddNameDialog(
                     title = stringResource(R.string.add_muscle),
                     label = stringResource(R.string.muscle_name),
-                    onDismiss = { onAction(ExerciseListAction.OnShowMuscleDialog(false)) },
-                    onConfirm = { name -> onAction(ExerciseListAction.OnAddMuscle(name)) }
+                    onDismiss = { onAction(OnShowMuscleDialog(false)) },
+                    onConfirm = { name -> onAction(OnAddMuscle(name)) }
                 )
             }
 
-            if (state.confirmDialogVisible) {
+            if (state.activeWorkoutDialogVisible) {
                 InformativeDialog(
                     title = stringResource(R.string.new_session_confirm_dialog_title),
                     message = stringResource(R.string.new_session_confirm_dialog_message),
-                    onDismiss = { onAction(ExerciseListAction.OnShowConfirmDialog(false)) },
-                    onConfirm = { onAction(ExerciseListAction.OnStartWorkout) }
+                    onDismiss = { onAction(OnShowActiveWorkoutDialog(false)) },
+                    onConfirm = { onAction(OnStartWorkout) }
+                )
+            }
+
+            if (state.deletePlanDialogVisible) {
+                DeleteConfirmationDialog(
+                    title = stringResource(R.string.delete_workout_plan_dialog_title),
+                    message = stringResource(R.string.delete_workout_plan_dialog_message),
+                    onDismiss = { onAction(OnShowDeletePlannedDialog(false)) },
+                    onConfirm = { onAction(OnDeletePlannedWorkout) }
+                )
+            }
+
+            if (state.deleteDayWorkoutDialogVisible) {
+                DeleteConfirmationDialog(
+                    title = stringResource(R.string.delete_workout_dialog_title),
+                    message = stringResource(R.string.delete_workout_dialog_message),
+                    onDismiss = { onAction(OnShowDeleteWorkoutDialog(false)) },
+                    onConfirm = { onAction(OnDeleteDayWorkout) }
                 )
             }
 
@@ -252,12 +259,39 @@ fun ExerciseListScreen(
     }
 }
 
+fun handleEvents(
+    onAction: (ExerciseListAction) -> Unit,
+    event: ExerciseListEvent,
+    snackState: SnackbarHostState,
+    context: Context,
+    scope: CoroutineScope
+) {
+    if (event is ExerciseListEvent.SendToReview) {
+        onAction(OnNavigateToReview(event.day))
+    }
+
+    val message = when (event) {
+        is ExerciseListEvent.ErrorMessage -> event.reason.asString(context)
+        is ExerciseListEvent.WorkoutSaved -> context.getString(R.string.saved_workout_message)
+        is ExerciseListEvent.WorkoutUpdated -> context.getString(R.string.updated_workout_message)
+        ExerciseListEvent.WorkoutDeleted -> context.getString(R.string.deleted_workout_message)
+        else -> context.getString(R.string.generic_error)
+    }
+
+    showSnackBarMessage(
+        scope = scope,
+        hostState = snackState,
+        message = message
+    )
+}
+
 @Composable
 private fun WorkoutWeekCalendar(
     onDayNodeClick: (Int) -> Unit,
     workoutDays: Set<Int>,
     plannedDays: Set<Int>,
     currentDay: Int,
+    daySelected: Int,
     mode: ScreenMode
 ) {
     val days = listOf("L", "M", "X", "J", "V", "S", "D")
@@ -265,6 +299,7 @@ private fun WorkoutWeekCalendar(
     val title = when (mode) {
         is ScreenMode.Planning -> R.string.planning
         ScreenMode.Workout -> R.string.activity_this_week
+        ScreenMode.Review -> R.string.activity_this_week
     }
 
     Column(
@@ -282,44 +317,57 @@ private fun WorkoutWeekCalendar(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            days.forEachIndexed { index, day ->
-                val dayNumber = index + 1
-                val isWorkoutDone = workoutDays.contains(dayNumber)
-                val isToday = dayNumber == currentDay
-                val isPlanned = plannedDays.contains(dayNumber) && dayNumber > currentDay
-                val isWeekDone = workoutDays.size >= 4
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val itemWidth = maxWidth / days.size
 
-                val node = getDayNode(
-                    text = day,
-                    isWorkoutDone = isWorkoutDone,
-                    isToday = isToday,
-                    isWeekDone = isWeekDone,
-                    isPlanned = isPlanned,
-                    isPlanning = mode is ScreenMode.Planning && mode.day == dayNumber
-                )
+            Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                days.forEachIndexed { index, day ->
+                    val dayNumber = index + 1
+                    val isWorkoutDone = workoutDays.contains(dayNumber)
+                    val isToday = dayNumber == currentDay
+                    val isPlanned = plannedDays.contains(dayNumber) && dayNumber > currentDay
+                    val isWeekDone = workoutDays.size >= 4
 
-                Column {
-                    DayNode(
-                        onClick = { onDayNodeClick(dayNumber) },
-                        node = node
+                    val node = getDayNode(
+                        text = day,
+                        isWorkoutDone = isWorkoutDone,
+                        isToday = isToday,
+                        isWeekDone = isWeekDone,
+                        isPlanned = isPlanned,
+                        isPlanning = mode is ScreenMode.Planning && mode.day == dayNumber
                     )
-                    // Day selected box
-                    if (dayNumber == 3) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                                .padding(8.dp)
-                                .width(20.dp)
-                                .height(2.dp)
-                                .background(Color.White)
+
+                    Box(
+                        modifier = Modifier.width(itemWidth),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        DayNode(
+                            onClick = { onDayNodeClick(dayNumber) },
+                            node = node
                         )
                     }
                 }
             }
+
+            val indicatorWidth = 20.dp
+            val indicatorOffset =
+                (itemWidth * (daySelected - 1)) + (itemWidth / 2) - (indicatorWidth / 2)
+
+            val animatedIndicatorOffset by animateDpAsState(
+                targetValue = indicatorOffset,
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                label = "indicator_offset"
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(x = animatedIndicatorOffset)
+                    .padding(top = 55.dp)
+                    .width(indicatorWidth)
+                    .height(2.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.onSurface)
+            )
         }
     }
 }
@@ -392,7 +440,7 @@ private fun MuscleSection(
             TextButton(
                 modifier = Modifier.padding(0.dp),
                 contentPadding = PaddingValues(0.dp),
-                onClick = { onAction(ExerciseListAction.OnShowExerciseDialog(true)) }
+                onClick = { onAction(OnShowExerciseDialog(true)) }
             ) {
                 Text(
                     modifier = Modifier.padding(horizontal = 8.dp),
@@ -404,7 +452,7 @@ private fun MuscleSection(
         SelectableAnimatedItem(
             name = it.name,
             isSelected = state.selectedMuscleIds.contains(it.id),
-            onSelect = { onAction(ExerciseListAction.OnMuscleSelected(it.id)) }
+            onSelect = { onAction(OnMuscleSelected(it.id)) }
         )
     }
 }
@@ -434,7 +482,7 @@ private fun ExerciseSection(
                 TextButton(
                     modifier = Modifier.padding(0.dp),
                     contentPadding = PaddingValues(0.dp),
-                    onClick = { onAction(ExerciseListAction.OnShowExerciseDialog(true)) }
+                    onClick = { onAction(OnShowExerciseDialog(true)) }
                 ) {
                     Text(
                         modifier = Modifier.padding(horizontal = 8.dp),
@@ -447,7 +495,7 @@ private fun ExerciseSection(
         SelectableAnimatedItem(
             name = it.name,
             isSelected = state.selectedExerciseIds.contains(it.id),
-            onSelect = { onAction(ExerciseListAction.OnExerciseSelected(it.id)) }
+            onSelect = { onAction(OnExerciseSelected(it.id)) }
         )
     }
 }
@@ -506,79 +554,95 @@ private fun ActionsSection(
         when (state.screenMode) {
             is ScreenMode.Planning -> PlanningActionButtons(onAction = onAction, state = state)
             ScreenMode.Workout -> WorkoutActionButtons(onAction = onAction, state = state)
+            ScreenMode.Review -> ReviewActionButtons(onAction = onAction, state = state)
         }
     }
 }
 
 @Composable
-fun RowScope.PlanningActionButtons(
+private fun RowScope.ReviewActionButtons(
     onAction: (ExerciseListAction) -> Unit,
     state: ExerciseListState
 ) {
-    if (state.selectedExerciseIds.isEmpty()) {
-        PrimaryButtonLayout(
-            modifier = Modifier.weight(1f),
-            onClick = { onAction(ExerciseListAction.OnReturnToWorkout) },
-            content = { ReturnToWorkoutButton() }
-        )
-    } else {
-        val isUpdate =
-            state.screenMode is ScreenMode.Planning && state.screenMode.day in state.plannedWorkouts
-        SecondaryButtonLayout(
-            modifier = Modifier.weight(1f),
-            onClick = { onAction(ExerciseListAction.OnReturnToWorkout) },
-            content = { ReturnToWorkoutButton() }
-        )
+    SecondaryButtonLayout(
+        modifier = Modifier.weight(1f),
+        onClick = { onAction(OnReturnToWorkout) },
+        content = { ReturnToWorkoutButton() }
+    )
 
+    if (state.selectedExerciseIds.isNotEmpty()) {
         PrimaryButtonLayout(
             modifier = Modifier.weight(1f),
-            onClick = { onAction(ExerciseListAction.OnSaveWorkout) },
-            content = { SaveWorkoutButton(isUpdate) }
+            onClick = { onAction(OnRedoWorkout) },
+            content = { RedoWorkoutButton() }
         )
     }
 
     PrimaryButtonLayout(
         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-        onClick = { onAction(ExerciseListAction.OnSaveWorkout) },
-        content = { DeletePlannedWorkoutButton() }
+        onClick = { onAction(OnShowDeleteWorkoutDialog(true)) },
+        content = { DeleteButton() }
     )
 }
 
 @Composable
-fun RowScope.WorkoutActionButtons(
+private fun RowScope.PlanningActionButtons(
     onAction: (ExerciseListAction) -> Unit,
     state: ExerciseListState
 ) {
-    when {
-        state.hasActiveWorkout && state.selectedExerciseIds.isEmpty() -> {
-            PrimaryButtonLayout(
-                modifier = Modifier.weight(1f),
-                onClick = { onAction(ExerciseListAction.OnResumeWorkout) },
-                content = { ResumeWorkoutButton() }
-            )
-        }
+    val isUpdate =
+        state.screenMode is ScreenMode.Planning && state.screenMode.day in state.plannedWorkouts
 
-        state.hasActiveWorkout -> {
-            SecondaryButtonLayout(
-                modifier = Modifier.weight(1f),
-                onClick = { onAction(ExerciseListAction.OnShowConfirmDialog(true)) },
-                content = { StartWorkoutButton() }
-            )
+    SecondaryButtonLayout(
+        modifier = Modifier.weight(1f),
+        onClick = { onAction(OnReturnToWorkout) },
+        content = { ReturnToWorkoutButton() }
+    )
 
-            PrimaryButtonLayout(
-                modifier = Modifier.weight(1f),
-                onClick = { onAction(ExerciseListAction.OnResumeWorkout) },
-                content = { ResumeWorkoutButton() }
-            )
-        }
+    if (state.selectedExerciseIds.isNotEmpty()) {
+        PrimaryButtonLayout(
+            modifier = Modifier.weight(1f),
+            onClick = { onAction(OnSaveWorkout(isUpdate)) },
+            content = { SaveWorkoutButton(isUpdate) }
+        )
+    }
 
-        state.selectedExerciseIds.isNotEmpty() -> {
-            PrimaryButtonLayout(
-                modifier = Modifier.weight(1f),
-                onClick = { onAction(ExerciseListAction.OnStartWorkout) },
-                content = { StartWorkoutButton() }
-            )
-        }
+    if (state.daySelected in state.plannedWorkouts) {
+        PrimaryButtonLayout(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            onClick = { onAction(OnShowDeletePlannedDialog(true)) },
+            content = { DeleteButton() }
+        )
+    }
+}
+
+@Composable
+private fun RowScope.WorkoutActionButtons(
+    onAction: (ExerciseListAction) -> Unit,
+    state: ExerciseListState
+) {
+    if (state.selectedExerciseIds.isNotEmpty()) {
+        PrimaryButtonLayout(
+            modifier = Modifier.weight(1f),
+            onClick = { onAction(OnStartWorkout) },
+            content = { StartWorkoutButton() }
+        )
+    }
+
+    if (state.hasActiveWorkout) {
+        PrimaryButtonLayout(
+            modifier = Modifier.weight(1f),
+            onClick = { onAction(OnResumeWorkout) },
+            content = { ResumeWorkoutButton() }
+        )
+    }
+
+    if (state.currentDay in state.workoutDaysDone) {
+        PrimaryButtonLayout(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            onClick = { onAction(OnShowDeleteWorkoutDialog(true)) },
+            content = { DeleteButton() }
+        )
     }
 }
 
@@ -632,6 +696,14 @@ private fun IconTextActionButton(icon: ImageVector, text: String) {
 }
 
 @Composable
+private fun RedoWorkoutButton() {
+    IconTextActionButton(
+        icon = ImageVector.vectorResource(R.drawable.outline_redo_24),
+        text = stringResource(R.string.redo_workout)
+    )
+}
+
+@Composable
 private fun SaveWorkoutButton(isUpdate: Boolean) {
     val text =
         if (isUpdate) R.string.update_workout
@@ -662,7 +734,7 @@ private fun ResumeWorkoutButton() {
 }
 
 @Composable
-private fun DeletePlannedWorkoutButton() {
+private fun DeleteButton() {
     Icon(
         modifier = Modifier.padding(vertical = 6.dp),
         imageVector = ImageVector.vectorResource(R.drawable.outline_delete_24),
@@ -772,7 +844,33 @@ private fun InformativeDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun DeleteConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    modifier: Modifier = Modifier,
+    title: String,
+    message: String,
+) {
+    AlertDialog(
+        modifier = modifier,
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            Button(onClick = { onConfirm() }) {
+                Text(stringResource(R.string.delete_workout_plan_dialog_delete_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onDismiss() }) {
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -811,7 +909,7 @@ private fun AddNameDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.Cancel))
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -894,8 +992,10 @@ private fun ExerciseListScreenPreview() {
                 onAction = {},
                 events = flowOf(),
                 state = ExerciseListState(
-                    screenMode = ScreenMode.Planning(7),
+                    screenMode = ScreenMode.Workout,
                     hasActiveWorkout = false,
+                    workoutDaysDone = setOf(1),
+                    currentDay = 1,
                     selectedExerciseIds = emptyList()
                 )
             )

@@ -16,47 +16,40 @@ class WorkoutPlanRepository(
 
     override fun getPlannedWorkouts(): Flow<List<WorkoutPlan>> =
         workoutPlanDao.getWeekWorkoutPlans(
-            clock.getMillisAtStartOfDay(1)
+            clock.getMillisForStartOfDayInWeek(clock.getCurrentDayOfWeek() + 1)
         ).map { list ->
             list.map {
-                it.toDomain(clock.getDayNumberFromMillis(it.date))
+                it.toDomain(clock.getDayOfWeekFromMillis(it.date))
             }
         }
-
-    /**
-     * Añadir funcionalidad de review (repetir entreno) días pasado
-     * Añadir funcionalidad de actualización de agendado
-     * Añadir flujo de borrado de entreno agendado
-     * Eliminar entrenos pasados (misma semana)
-     * Cambiar librería de gráficas
-     * Eliminar sets desde gráfica
-     *
-     * Añadir broadcast receiver del día y arreglar flows para que lo usen
-     * Mover el día seleccionado al estado de la vista
-     * Cambiar indicador de día seleccionado
-     * Cambiar filtros de músculos
-     * Cambiar flujos de añadido de ejercicios (siempre visible)
-     */
 
     override suspend fun insertWorkoutPlan(workoutPlan: WorkoutPlan): Long =
         workoutPlanDao.insertWorkoutPlan(
             workoutPlan.toEntity(
-                millis = clock.getMillisForDay(workoutPlan.day - clock.getCurrentNumberDay())
+                millis = clock.getMillisForStartOfDayInWeek(workoutPlan.day)
             )
         )
 
-    override suspend fun updateWorkoutPlan(workoutPlan: WorkoutPlan) {
+    override suspend fun updateWorkoutPlan(day: Int, newExercises: List<Int>) {
+        val starMillis = clock.getMillisForStartOfDayInWeek(day)
+        val endMillis = clock.getMillisForStartOfDayInWeek(day + 1)
         workoutPlanDao.updateWorkoutPlan(
-            workoutPlan.toEntity(
-                millis = clock.getMillisForDay(workoutPlan.day - clock.getCurrentNumberDay())
-            )
+            startDate = starMillis,
+            endDate = endMillis,
+            newExercises = newExercises
         )
     }
 
     override suspend fun deleteWorkoutPlan(workoutPlan: WorkoutPlan) =
         workoutPlanDao.deleteWorkoutPlan(
             workoutPlan.toEntity(
-                millis = clock.getMillisForDay(workoutPlan.day - clock.getCurrentNumberDay())
+                millis = clock.getMillisForStartOfDayInWeek(workoutPlan.day)
             )
         )
+
+    override suspend fun deleteWorkoutPlanFromDay(day: Int) {
+        val starMillis = clock.getMillisForStartOfDayInWeek(day)
+        val endMillis = clock.getMillisForStartOfDayInWeek(day + 1)
+        workoutPlanDao.deleteWorkoutPlan(starMillis, endMillis)
+    }
 }
