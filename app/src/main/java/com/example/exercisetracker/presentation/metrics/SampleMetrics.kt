@@ -23,7 +23,7 @@ val sampleMetricsState = MetricsState(
         Exercise(id = 2, name = "Tricep Dips", targetMuscleId = 2),
         Exercise(id = 3, name = "Shoulder Press", targetMuscleId = 3)
     ),
-    totalVolume = 1000f,
+    averageReps = 1000,
     maxWeight = 100f,
     rm = 120.0,
     typeFilterSelected = TypeFilter.WEIGHT,
@@ -35,11 +35,13 @@ val sampleMetricsState = MetricsState(
         TimeFilter.SIX_MONTH,
         TimeFilter.ONE_YEAR
     ),
-    graphPoints = listOf(
-        GraphPoints(value = 10f, description = "Jan"),
-        GraphPoints(value = 20f, description = "Feb"),
-        GraphPoints(value = 30f, description = "Mar"),
-        GraphPoints(value = 40f, description = "Apr"),
-        GraphPoints(value = 50f, description = "May")
+    graphPoints = mapOf(
+        "20/Feb" to listOf(5.0, 4.0, 7.0, 1.1),
+        "21/Feb" to listOf(5.0, 4.0, 1.1),
+        "22/Feb" to listOf(1.0, 5.0, 4.0, 7.0),
+        "23/Feb" to listOf(5.0, 4.0, 7.0),
+        "24/Feb" to listOf(2.0, 5.0, 4.0, 7.0),
+        "25/Feb" to listOf(1.0, 2.0, 5.0, 4.0, 7.0),
+        "26/Feb" to listOf(1.5, 2.2, 4.0, 7.0),
     )
 )

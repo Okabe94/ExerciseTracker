@@ -45,7 +45,7 @@ android {
 
 dependencies {
     // Charts
-    implementation(libs.compose.charts)
+    implementation(libs.new.compose.charts)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

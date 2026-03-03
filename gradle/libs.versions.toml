@@ -20,6 +20,7 @@ mockito = "5.21.0"
 mockitoKotlin = "6.2.0"
 kotlinxCoroutinesTest = "1.10.2"
 yCharts = "2.1.0"
+composeCharts = "0.2.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -57,7 +58,7 @@ mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mo
 mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 
-compose-charts = { group = "co.yml", name = "ycharts", version.ref = "yCharts" }
+new-compose-charts = {group = "io.github.ehsannarmani", name = "compose-charts", version.ref="composeCharts"}
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

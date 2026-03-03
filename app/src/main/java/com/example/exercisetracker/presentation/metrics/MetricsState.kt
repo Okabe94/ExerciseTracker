@@ -11,18 +11,13 @@ data class MetricsState(
     val expandedExerciseSelection: Boolean = false,
     val muscleList: List<Muscle> = emptyList(),
     val exerciseList: List<Exercise> = emptyList(),
-    val totalVolume: Float = 0f,
+    val averageReps: Int = 0,
     val maxWeight: Float = 0f,
     val rm: Double = 0.0,
     val typeFilterSelected: TypeFilter = TypeFilter.REPS,
     val timeFilterSelected: TimeFilter = TimeFilter.ALL,
     val timeFilterOptions: List<TimeFilter> = emptyList(),
-    val graphPoints: List<GraphPoints> = emptyList()
-)
-
-data class GraphPoints(
-    val value: Float = 0f,
-    val description: String = ""
+    val graphPoints: Map<String, List<Double>> = emptyMap()
 )
 
 

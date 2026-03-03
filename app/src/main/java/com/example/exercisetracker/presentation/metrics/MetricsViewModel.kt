@@ -63,23 +63,26 @@ class MetricsViewModel(
             }
 
         val maxWeight = graph.maxOfOrNull { it.weight } ?: 0f
-        val totalVolume = graph.map { (it.weight * it.reps) }
-            .reduceOrNull { acc, value -> acc + value }
-            ?: 0f
+        val averageReps = try {
+            graph.sumOf { it.reps }.div(graph.size)
+        } catch (e: Exception) {
+            0
+        }
 
         val rm = graph.maxByOrNull { it.weight }?.let {
             it.weight * (1 + connerConstant * it.reps)
         } ?: 0.0
 
-        val graphList = graph.map {
-            val value = if (filter.typeSelected == TypeFilter.WEIGHT) {
-                it.weight
-            } else {
-                it.reps.toFloat()
+        val graphList = graph.groupBy { clock.getDateLabelFromMillis(it.startTime) }
+            .mapValues { entry ->
+                entry.value.map {
+                    if (filter.typeSelected == TypeFilter.WEIGHT) {
+                        it.weight.toDouble()
+                    } else {
+                        it.reps.toDouble()
+                    }
+                }
             }
-            val description = clock.getDateLabelFromMillis(it.startTime)
-            GraphPoints(value, description)
-        }
 
         MetricsState(
             filteredMuscleId = internal.muscleSelected?.id ?: 0,
@@ -87,7 +90,7 @@ class MetricsViewModel(
             expandedExerciseSelection = internal.expandedList,
             muscleList = musclesAndExercises.first,
             exerciseList = filteredExercises,
-            totalVolume = totalVolume,
+            averageReps = averageReps,
             maxWeight = maxWeight,
             rm = rm,
             timeFilterSelected = filter.timeSelected,

@@ -152,6 +152,11 @@ class ExerciseListViewModel(
                     deleteDayWorkoutDialogVisible = false
                 )
             }
+            _eventsChannel.trySend(
+                ExerciseListEvent.Message(
+                    reason = UiText.StringResource(id = R.string.deleted_workout_message)
+                )
+            )
         }
     }
 
@@ -159,7 +164,11 @@ class ExerciseListViewModel(
         viewModelScope.launch {
             val day = _internalState.value.daySelected
             planRepository.deleteWorkoutPlanFromDay(day)
-            _eventsChannel.trySend(ExerciseListEvent.WorkoutDeleted)
+            _eventsChannel.trySend(
+                ExerciseListEvent.Message(
+                    reason = UiText.StringResource(id = R.string.deleted_workout_message)
+                )
+            )
             _internalState.update { state ->
                 state.copy(
                     screenMode = ScreenMode.Workout,
@@ -177,21 +186,27 @@ class ExerciseListViewModel(
         if (mode !is ScreenMode.Planning) return
 
         viewModelScope.launch {
+            val message: Int
             if (update) {
+                message = R.string.updated_workout_message
                 planRepository.updateWorkoutPlan(
                     day = mode.day,
                     newExercises = _internalState.value.selectedExerciseIds.toList()
                 )
-                _eventsChannel.trySend(ExerciseListEvent.WorkoutUpdated)
             } else {
+                message = R.string.saved_workout_message
                 planRepository.insertWorkoutPlan(
                     WorkoutPlan(
                         day = mode.day,
                         exercises = _internalState.value.selectedExerciseIds.toList()
                     )
                 )
-                _eventsChannel.trySend(ExerciseListEvent.WorkoutSaved)
             }
+            _eventsChannel.trySend(
+                ExerciseListEvent.Message(
+                    reason = UiText.StringResource(id = message)
+                )
+            )
         }
 
         _internalState.update { state ->
@@ -264,7 +279,7 @@ class ExerciseListViewModel(
             }
 
             _eventsChannel.trySend(
-                ExerciseListEvent.ErrorMessage(
+                ExerciseListEvent.Message(
                     reason = UiText.StringResource(id = R.string.not_trained_this_day)
                 )
             )

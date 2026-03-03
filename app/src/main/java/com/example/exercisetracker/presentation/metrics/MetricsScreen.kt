@@ -3,6 +3,8 @@
 package com.example.exercisetracker.presentation.metrics
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,28 +50,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import co.yml.charts.axis.AxisData
-import co.yml.charts.common.extensions.formatToSinglePrecision
-import co.yml.charts.common.model.Point
-import co.yml.charts.ui.linechart.LineChart
-import co.yml.charts.ui.linechart.model.GridLines
-import co.yml.charts.ui.linechart.model.IntersectionPoint
-import co.yml.charts.ui.linechart.model.Line
-import co.yml.charts.ui.linechart.model.LineChartData
-import co.yml.charts.ui.linechart.model.LinePlotData
-import co.yml.charts.ui.linechart.model.LineStyle
-import co.yml.charts.ui.linechart.model.SelectionHighlightPoint
-import co.yml.charts.ui.linechart.model.SelectionHighlightPopUp
-import co.yml.charts.ui.linechart.model.ShadowUnderLine
 import com.example.exercisetracker.R
 import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
@@ -78,6 +68,13 @@ import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.model.WorkoutSet
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
+import ir.ehsannarmani.compose_charts.RowChart
+import ir.ehsannarmani.compose_charts.models.BarProperties
+import ir.ehsannarmani.compose_charts.models.Bars
+import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
+import ir.ehsannarmani.compose_charts.models.LabelProperties
+import ir.ehsannarmani.compose_charts.models.PopupProperties
+import ir.ehsannarmani.compose_charts.models.VerticalIndicatorProperties
 import java.util.Locale
 import java.util.Locale.getDefault
 
@@ -128,7 +125,7 @@ fun MetricsScreen(
             item {
                 ExerciseSummaryCard(
                     exerciseName = state.selectedExercise,
-                    totalVolume = state.totalVolume,
+                    averageReps = state.averageReps,
                     maxWeight = state.maxWeight,
                     estimated1RM = state.rm
                 )
@@ -153,7 +150,7 @@ fun MetricsScreen(
                 )
             }
 
-            item { Graph(data = state.graphPoints) }
+            item { Graph(mode = state.typeFilterSelected, data = state.graphPoints) }
 
             item {
                 HistoricalSetRow(
@@ -333,7 +330,7 @@ private fun ExerciseSelectorHeader(
 @Composable
 private fun ExerciseSummaryCard(
     exerciseName: Exercise?,
-    totalVolume: Float,
+    averageReps: Int,
     maxWeight: Float,
     estimated1RM: Double,
 ) {
@@ -368,19 +365,20 @@ private fun ExerciseSummaryCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(
-                    label = stringResource(R.string.total_volume),
-                    value = "$totalVolume",
-                    Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    withLabel = false,
+                    label = stringResource(R.string.average_reps),
+                    value = "$averageReps",
                 )
                 StatItem(
+                    Modifier.weight(1f),
                     label = stringResource(R.string.max_weight),
                     value = "$maxWeight",
-                    Modifier.weight(1f)
                 )
                 StatItem(
+                    modifier = Modifier.weight(1f),
                     label = stringResource(R.string.est_1rm),
-                    value = String.format(Locale.getDefault(), "%.2f", estimated1RM),
-                    Modifier.weight(1f)
+                    value = String.format(getDefault(), "%.2f", estimated1RM),
                 )
             }
         }
@@ -389,9 +387,10 @@ private fun ExerciseSummaryCard(
 
 @Composable
 private fun StatItem(
+    modifier: Modifier = Modifier,
+    withLabel: Boolean = true,
     label: String,
     value: String,
-    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
@@ -402,7 +401,9 @@ private fun StatItem(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
         Spacer(modifier = Modifier.height(4.dp))
+
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 text = value,
@@ -410,11 +411,14 @@ private fun StatItem(
                 fontWeight = FontWeight.ExtraBold
             )
             Spacer(modifier = Modifier.width(2.dp))
-            Text(
-                text = stringResource(R.string.kg),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            if (withLabel) {
+                Text(
+                    text = stringResource(R.string.kg),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -489,61 +493,77 @@ private fun GraphMetricToggle(
 }
 
 @Composable
-private fun Graph(modifier: Modifier = Modifier, data: List<GraphPoints>) {
+private fun Graph(
+    modifier: Modifier = Modifier,
+    mode: TypeFilter,
+    data: Map<String, List<Double>>
+) {
     if (data.isEmpty()) return
 
-    val mapped = data.mapIndexed { index, point ->
-        Point(x = index.toFloat() + 1, y = point.value, description = point.description)
+    val dataLabel = when (mode) {
+        TypeFilter.REPS -> stringResource(R.string.reps_small)
+        TypeFilter.WEIGHT -> stringResource(R.string.kg)
     }
 
-    val points = listOf(Point(0f, 0f, "")) + mapped
-    val maxValue = points.maxOfOrNull { it.y } ?: 0f
-
-    val xAxisData = AxisData.Builder()
-        .axisStepSize(60.dp)
-        .backgroundColor(MaterialTheme.colorScheme.surfaceVariant)
-        .axisLabelColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        .steps(points.size - 1)
-        .labelData { i -> points[i].description }
-        .labelAndAxisLinePadding(20.dp)
-        .build()
-
-    val yAxisData = AxisData.Builder()
-        .steps(10)
-        .backgroundColor(MaterialTheme.colorScheme.surfaceVariant)
-        .axisLabelColor(MaterialTheme.colorScheme.onSurfaceVariant)
-        .labelAndAxisLinePadding(30.dp)
-        .labelData { index -> (index * (maxValue / 10)).formatToSinglePrecision() }
-        .build()
-
-    val lineChartData = LineChartData(
-        linePlotData = LinePlotData(
-            lines = listOf(
-                Line(
-                    dataPoints = points,
-                    lineStyle = LineStyle(),
-                    intersectionPoint = IntersectionPoint(),
-                    selectionHighlightPoint = SelectionHighlightPoint(color = MaterialTheme.colorScheme.tertiary),
-                    shadowUnderLine = ShadowUnderLine(color = MaterialTheme.colorScheme.primary),
-                    selectionHighlightPopUp = SelectionHighlightPopUp(popUpLabel = { x, y -> " $y " })
-                )
-            ),
-        ),
-        xAxisData = xAxisData,
-        yAxisData = yAxisData,
-        gridLines = GridLines(
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            lineWidth = 0.3.dp
-        ),
-        backgroundColor = MaterialTheme.colorScheme.surfaceVariant
-    )
-
-    Card {
-        LineChart(
-            modifier = modifier.height(300.dp),
-            lineChartData = lineChartData
+    val style = with(MaterialTheme.typography.labelMedium) {
+        TextStyle(
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = fontSize,
+            fontFamily = fontFamily
         )
     }
+
+    val height = data.keys.sumOf { data[it]?.size ?: 0 } * 40
+
+    RowChart(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height.dp)
+            .padding(top = 16.dp),
+        data = data.map { (key, value) ->
+            Bars(
+                label = key,
+                values = value.map {
+                    Bars.Data(
+                        value = it,
+                        color = Brush.horizontalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.onSecondary,
+                                MaterialTheme.colorScheme.primary,
+                            )
+                        )
+                    )
+                }
+            )
+        },
+        barProperties = BarProperties(
+            cornerRadius = Bars.Data.Radius.Rectangle(topRight = 6.dp, topLeft = 6.dp),
+            spacing = 3.dp,
+            thickness = 10.dp
+        ),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        indicatorProperties = VerticalIndicatorProperties(
+            textStyle = style
+        ),
+        labelProperties = LabelProperties(
+            enabled = true,
+            textStyle = style,
+            labels = data.keys.toList()
+        ),
+        labelHelperProperties = LabelHelperProperties(
+            enabled = false,
+            textStyle = style
+        ),
+        popupProperties = PopupProperties(
+            enabled = true,
+            contentBuilder = { popUp ->
+                "${popUp.value} $dataLabel"
+            }
+        )
+    )
 }
 
 @Composable
@@ -560,8 +580,14 @@ fun HistoricalSetRow(
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        with(set){
-            SetInfoRow(setNumber, weight, reps, "kg", false)
+        with(set) {
+            SetInfoRow(
+                setNumber = setNumber,
+                weight = weight,
+                reps = reps,
+                unit = stringResource(R.string.kg),
+                isLastSet = false
+            )
         }
 
         Spacer(Modifier.weight(1f))

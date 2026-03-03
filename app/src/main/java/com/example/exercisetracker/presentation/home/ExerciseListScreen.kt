@@ -271,10 +271,7 @@ fun handleEvents(
     }
 
     val message = when (event) {
-        is ExerciseListEvent.ErrorMessage -> event.reason.asString(context)
-        is ExerciseListEvent.WorkoutSaved -> context.getString(R.string.saved_workout_message)
-        is ExerciseListEvent.WorkoutUpdated -> context.getString(R.string.updated_workout_message)
-        ExerciseListEvent.WorkoutDeleted -> context.getString(R.string.deleted_workout_message)
+        is ExerciseListEvent.Message -> event.reason.asString(context)
         else -> context.getString(R.string.generic_error)
     }
 

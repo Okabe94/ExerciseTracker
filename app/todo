@@ -1,5 +1,4 @@
 /**
- * Cambiar librería de gráficas
  * Eliminar sets desde gráfica
  *
  * Añadir broadcast receiver del día y arreglar flows para que lo usen
