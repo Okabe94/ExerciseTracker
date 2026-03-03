@@ -75,12 +75,11 @@ class MetricsViewModel(
 
         val graphList = graph.groupBy { clock.getDateLabelFromMillis(it.startTime) }
             .mapValues { entry ->
-                entry.value.map {
-                    if (filter.typeSelected == TypeFilter.WEIGHT) {
-                        it.weight.toDouble()
-                    } else {
-                        it.reps.toDouble()
-                    }
+                if (filter.typeSelected == TypeFilter.WEIGHT) {
+                    if (entry.value.isEmpty()) return@mapValues 0.0
+                    entry.value.sumOf { it.weight.toDouble() } / entry.value.size
+                } else {
+                    entry.value.sumOf { it.reps }.toDouble()
                 }
             }
 

@@ -496,7 +496,7 @@ private fun GraphMetricToggle(
 private fun Graph(
     modifier: Modifier = Modifier,
     mode: TypeFilter,
-    data: Map<String, List<Double>>
+    data: Map<String, Double>
 ) {
     if (data.isEmpty()) return
 
@@ -513,7 +513,7 @@ private fun Graph(
         )
     }
 
-    val height = data.keys.sumOf { data[it]?.size ?: 0 } * 40
+    val height = data.keys.size * 60
 
     RowChart(
         modifier = modifier
@@ -523,9 +523,9 @@ private fun Graph(
         data = data.map { (key, value) ->
             Bars(
                 label = key,
-                values = value.map {
+                values = listOf(
                     Bars.Data(
-                        value = it,
+                        value = value,
                         color = Brush.horizontalGradient(
                             listOf(
                                 MaterialTheme.colorScheme.onSecondary,
@@ -533,13 +533,13 @@ private fun Graph(
                             )
                         )
                     )
-                }
+                )
             )
         },
         barProperties = BarProperties(
             cornerRadius = Bars.Data.Radius.Rectangle(topRight = 6.dp, topLeft = 6.dp),
             spacing = 3.dp,
-            thickness = 10.dp
+            thickness = 20.dp
         ),
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -560,8 +560,9 @@ private fun Graph(
         popupProperties = PopupProperties(
             enabled = true,
             contentBuilder = { popUp ->
-                "${popUp.value} $dataLabel"
-            }
+                "${String.format(getDefault(), "%.2f", popUp.value)} $dataLabel"
+            },
+            textStyle = style
         )
     )
 }

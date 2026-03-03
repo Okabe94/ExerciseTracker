@@ -17,7 +17,7 @@ data class MetricsState(
     val typeFilterSelected: TypeFilter = TypeFilter.REPS,
     val timeFilterSelected: TimeFilter = TimeFilter.ALL,
     val timeFilterOptions: List<TimeFilter> = emptyList(),
-    val graphPoints: Map<String, List<Double>> = emptyMap()
+    val graphPoints: Map<String, Double> = emptyMap()
 )
 
 

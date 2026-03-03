@@ -36,12 +36,12 @@ val sampleMetricsState = MetricsState(
         TimeFilter.ONE_YEAR
     ),
     graphPoints = mapOf(
-        "20/Feb" to listOf(5.0, 4.0, 7.0, 1.1),
-        "21/Feb" to listOf(5.0, 4.0, 1.1),
-        "22/Feb" to listOf(1.0, 5.0, 4.0, 7.0),
-        "23/Feb" to listOf(5.0, 4.0, 7.0),
-        "24/Feb" to listOf(2.0, 5.0, 4.0, 7.0),
-        "25/Feb" to listOf(1.0, 2.0, 5.0, 4.0, 7.0),
-        "26/Feb" to listOf(1.5, 2.2, 4.0, 7.0),
+        "20/Feb" to 5.0,
+        "21/Feb" to 5.0,
+        "22/Feb" to 1.0,
+        "23/Feb" to 5.0,
+        "24/Feb" to 2.0,
+        "25/Feb" to 1.0,
+        "26/Feb" to 1.5
     )
 )
