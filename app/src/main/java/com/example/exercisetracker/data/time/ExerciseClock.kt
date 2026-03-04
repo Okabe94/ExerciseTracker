@@ -15,7 +15,9 @@ class ExerciseClock(
 
     private val dateLabelFormatter = DateTimeFormatter.ofPattern("dd/MMM")
 
-    override fun now(): Long = System.currentTimeMillis()
+    override fun now(): Long =
+//        1772468582000
+        System.currentTimeMillis()
 
     override fun getCurrentDayOfWeek(): Int = getDayOfWeekFromMillis(now())
 

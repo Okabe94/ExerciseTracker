@@ -103,6 +103,8 @@ import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowDe
 import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowDeleteWorkoutDialog
 import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowExerciseDialog
 import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowMuscleDialog
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowPlannedTodayDialog
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnStartPlannedWorkout
 import com.example.exercisetracker.presentation.home.ExerciseListAction.OnStartWorkout
 import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
@@ -127,7 +129,8 @@ fun ExerciseListRoot(
             viewModel.onAction(it)
             when (it) {
                 is OnStartWorkout,
-                is OnResumeWorkout -> navigator.navigate(Route.Workout)
+                is OnResumeWorkout,
+                OnStartPlannedWorkout -> navigator.navigate(Route.Workout)
 
                 is OnNavigateToReview -> navigator.navigate(Route.Review(it.day))
                 else -> Unit
@@ -216,6 +219,15 @@ fun ExerciseListScreen(
                     message = stringResource(R.string.new_session_confirm_dialog_message),
                     onDismiss = { onAction(OnShowActiveWorkoutDialog(false)) },
                     onConfirm = { onAction(OnStartWorkout) }
+                )
+            }
+
+            if (state.plannedTodayDialogVisible) {
+                InformativeDialog(
+                    title = stringResource(R.string.planned_workout_dialog_title),
+                    message = stringResource(R.string.planned_workout_dialog_message),
+                    onDismiss = { onAction(OnShowPlannedTodayDialog(false)) },
+                    onConfirm = { onAction(OnStartPlannedWorkout) }
                 )
             }
 

@@ -46,6 +46,25 @@ class ExerciseListViewModel(
     private val _eventsChannel = Channel<ExerciseListEvent>()
     val events = _eventsChannel.receiveAsFlow()
 
+    init {
+        checkTodayPlannedWorkout()
+    }
+
+    private fun checkTodayPlannedWorkout() {
+        viewModelScope.launch {
+            val today = clock.getCurrentDayOfWeek()
+            val planned = _plannedWorkout.first().firstOrNull { it.day == today }
+            if (planned != null && planned.exercises.isNotEmpty()) {
+                _internalState.update {
+                    it.copy(
+                        plannedTodayDialogVisible = true,
+                        plannedExercisesForToday = planned.exercises
+                    )
+                }
+            }
+        }
+    }
+
     val state: StateFlow<ExerciseListState> = combine(
         _workoutWeek,
         _internalState,
@@ -80,6 +99,8 @@ class ExerciseListViewModel(
             activeWorkoutDialogVisible = internal.activeWorkoutDialogVisible,
             deletePlanDialogVisible = internal.deletePlanDialogVisible,
             deleteDayWorkoutDialogVisible = internal.deleteDayWorkoutDialogVisible,
+            plannedTodayDialogVisible = internal.plannedTodayDialogVisible,
+            plannedExercisesForToday = internal.plannedExercisesForToday,
             startWorkoutButtonVisible = internal.selectedExerciseIds.isNotEmpty(),
             selectedMuscleIds = internal.selectedMuscleIds.toList(),
             selectedExerciseIds = internal.selectedExerciseIds.toList(),
@@ -123,6 +144,21 @@ class ExerciseListViewModel(
 
             is ExerciseListAction.OnShowMuscleDialog -> _internalState.update {
                 it.copy(muscleDialogVisible = action.show)
+            }
+
+            is ExerciseListAction.OnShowPlannedTodayDialog -> _internalState.update {
+                it.copy(plannedTodayDialogVisible = action.show)
+            }
+
+            ExerciseListAction.OnStartPlannedWorkout -> {
+                val exercises = _internalState.value.plannedExercisesForToday
+                _internalState.update {
+                    it.copy(
+                        selectedExerciseIds = exercises.toMutableSet(),
+                        plannedTodayDialogVisible = false
+                    )
+                }
+                startWorkout()
             }
 
             else -> Unit
@@ -358,6 +394,8 @@ class ExerciseListViewModel(
         val activeWorkoutDialogVisible: Boolean = false,
         val deletePlanDialogVisible: Boolean = false,
         val deleteDayWorkoutDialogVisible: Boolean = false,
+        val plannedTodayDialogVisible: Boolean = false,
+        val plannedExercisesForToday: List<Int> = emptyList(),
         val selectedMuscleIds: MutableSet<Int> = mutableSetOf(),
         val selectedExerciseIds: MutableSet<Int> = mutableSetOf()
     )

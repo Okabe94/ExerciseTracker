@@ -21,4 +21,6 @@ sealed interface ExerciseListAction {
     data class OnShowActiveWorkoutDialog(val show: Boolean) : ExerciseListAction
     data class OnShowMuscleDialog(val show: Boolean) : ExerciseListAction
     data class OnShowExerciseDialog(val show: Boolean) : ExerciseListAction
+    data class OnShowPlannedTodayDialog(val show: Boolean) : ExerciseListAction
+    data object OnStartPlannedWorkout : ExerciseListAction
 }

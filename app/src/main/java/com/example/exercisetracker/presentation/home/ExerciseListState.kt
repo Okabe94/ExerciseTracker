@@ -17,6 +17,8 @@ data class ExerciseListState(
     val activeWorkoutDialogVisible: Boolean = false,
     val deletePlanDialogVisible: Boolean = false,
     val deleteDayWorkoutDialogVisible: Boolean = false,
+    val plannedTodayDialogVisible: Boolean = false,
+    val plannedExercisesForToday: List<Int> = emptyList(),
     val selectedMuscleIds: List<Int> = emptyList(),
     val selectedExerciseIds: List<Int> = emptyList(),
     val muscleList: List<Muscle> = emptyList(),

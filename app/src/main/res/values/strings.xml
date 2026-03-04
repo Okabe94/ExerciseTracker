@@ -58,4 +58,6 @@
     <string name="delete_set">Eliminar set\n</string>
     <string name="delete_set_dialog_title">Eliminar datos de histórico?</string>
     <string name="delete_set_dialog_message">Esto eliminará permanentemente este set y actualizará tus gráficas.</string>
+    <string name="planned_workout_dialog_title">Entrenar rutina agendada?</string>
+    <string name="planned_workout_dialog_message">Se encontró una rutina agendada para hoy, iniciar con el entro?</string>
 </resources>
