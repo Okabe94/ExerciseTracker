@@ -24,11 +24,9 @@ import com.example.exercisetracker.presentation.navigation.TOP_LEVEL_DESTINATION
 import com.example.exercisetracker.presentation.navigation.appNavigationBar
 import com.example.exercisetracker.presentation.navigation.rememberNavigationState
 import com.example.exercisetracker.presentation.navigation.toEntries
-import com.example.exercisetracker.presentation.review.ReviewRoot
 import com.example.exercisetracker.presentation.workout.WorkoutSessionRoot
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import org.koin.androidx.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 class MainActivity : ComponentActivity() {
 
@@ -88,14 +86,6 @@ class MainActivity : ComponentActivity() {
 
                                     entry<Route.Metrics> {
                                         MetricsRoot(viewModel = koinViewModel())
-                                    }
-
-                                    entry<Route.Review> {
-                                        ReviewRoot(
-                                            viewModel = koinViewModel(
-                                                parameters = { parametersOf(it.day) }
-                                            )
-                                        )
                                     }
                                 }
                             )
