@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class WorkoutSessionViewModel(
     private val exerciseRepository: IExerciseRepository,
@@ -39,7 +40,7 @@ class WorkoutSessionViewModel(
                     WorkoutSessionSet(
                         id = it.id,
                         number = it.setNumber,
-                        weight = if (it.weight == 0f) "" else it.weight.toString(),
+                        weight = if (it.weight == 0f) "" else it.weight.roundToInt().toString(),
                         reps = if (it.reps == 0) "" else it.reps.toString()
                     )
                 }
