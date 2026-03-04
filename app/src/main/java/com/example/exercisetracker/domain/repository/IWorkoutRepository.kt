@@ -17,6 +17,7 @@ interface IWorkoutRepository {
     suspend fun getWorkoutReview(day: Int): Flow<List<WorkoutReview>>
     suspend fun getWorkoutReviewExercises(day: Int): Flow<Set<Int>>
     suspend fun updateSet(set: WorkoutSet)
+    suspend fun deleteSet(setId: Int)
     suspend fun getActiveSessionId(): Int?
     suspend fun completeOpenSessions()
     suspend fun startNewSession(exercises: List<Int>): WorkoutSession

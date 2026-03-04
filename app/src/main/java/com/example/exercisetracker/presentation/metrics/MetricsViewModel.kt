@@ -4,6 +4,7 @@ package com.example.exercisetracker.presentation.metrics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.exercisetracker.data.local.model.MetricGraphData
 import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
 import com.example.exercisetracker.domain.model.Exercise
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 private const val connerConstant = 0.025
 
@@ -63,25 +65,23 @@ class MetricsViewModel(
             }
 
         val maxWeight = graph.maxOfOrNull { it.weight } ?: 0f
-        val averageReps = try {
-            graph.sumOf { it.reps }.div(graph.size)
-        } catch (e: Exception) {
-            0
+        val averageReps = if (graph.isEmpty()) 0 else {
+            try {
+                graph.sumOf { it.reps }.div(graph.size)
+            } catch (e: Exception) {
+                0
+            }
         }
 
         val rm = graph.maxByOrNull { it.weight }?.let {
             it.weight * (1 + connerConstant * it.reps)
         } ?: 0.0
 
-        val graphList = graph.groupBy { clock.getDateLabelFromMillis(it.startTime) }
-            .mapValues { entry ->
-                if (filter.typeSelected == TypeFilter.WEIGHT) {
-                    if (entry.value.isEmpty()) return@mapValues 0.0
-                    entry.value.sumOf { it.weight.toDouble() } / entry.value.size
-                } else {
-                    entry.value.sumOf { it.reps }.toDouble()
-                }
-            }
+        val processedData = processGraphData(
+            data = graph,
+            timeFilter = filter.timeSelected,
+            typeFilter = filter.typeSelected
+        )
 
         MetricsState(
             filteredMuscleId = internal.muscleSelected?.id ?: 0,
@@ -95,13 +95,70 @@ class MetricsViewModel(
             timeFilterSelected = filter.timeSelected,
             timeFilterOptions = filter.timeFilterOptions,
             typeFilterSelected = filter.typeSelected,
-            graphPoints = graphList
+            graphPoints = processedData.first,
+            groupedSets = processedData.second,
+            expandedSets = internal.expandedSets,
+            showDeleteConfirmation = internal.setIdToDelete != null,
+            setIdToDelete = internal.setIdToDelete
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000L),
         initialValue = MetricsState()
     )
+
+    private fun processGraphData(
+        data: List<MetricGraphData>,
+        timeFilter: TimeFilter,
+        typeFilter: TypeFilter
+    ): Pair<Map<String, Double>, Map<String, List<MetricGraphData>>> {
+        if (data.isEmpty()) return Pair(emptyMap(), emptyMap())
+
+        val grouped = when (timeFilter) {
+            TimeFilter.ONE_WEEK -> data.groupBy { it.startTime / (24 * 3600000L) }
+            TimeFilter.ONE_MONTH -> data.groupBy { it.startTime / (7 * 24 * 3600000L) }
+            TimeFilter.THREE_MONTH,
+            TimeFilter.SIX_MONTH -> data.groupBy { it.startTime / (14 * 24 * 3600000L) }
+
+            TimeFilter.ONE_YEAR -> data.groupBy { it.startTime / (30 * 24 * 3600000L) }
+            TimeFilter.ALL -> {
+                val sorted = data.sortedBy { it.startTime }
+                val start = sorted.first().startTime
+                val end = sorted.last().startTime
+                val range = (end - start).coerceAtLeast(1L)
+                val bucketSize = (range / 12).coerceAtLeast(1L)
+                data.groupBy { ((it.startTime - start) / bucketSize).coerceAtMost(11L) }
+            }
+        }
+
+        val firstBucketKey = grouped.keys.minOrNull() ?: 0L
+        val graphPoints = mutableMapOf<String, Double>()
+        val groupedSets = mutableMapOf<String, List<MetricGraphData>>()
+
+        grouped.toSortedMap().forEach { (key, bucketData) ->
+            val firstInBucket = bucketData.minBy { it.startTime }
+            val relativeIndex = (key - firstBucketKey).toInt() + 1
+
+            val label = when (timeFilter) {
+                TimeFilter.ONE_WEEK -> clock.getDateLabelFromMillis(firstInBucket.startTime)
+                TimeFilter.ONE_MONTH -> "Semana $relativeIndex"
+                TimeFilter.THREE_MONTH, TimeFilter.SIX_MONTH -> "Par semana $relativeIndex"
+                TimeFilter.ONE_YEAR -> "Mes $relativeIndex"
+                TimeFilter.ALL -> "Periodo $relativeIndex"
+            }
+
+            val value = if (typeFilter == TypeFilter.WEIGHT) {
+                bucketData.sumOf { it.weight.toDouble() } / bucketData.size
+            } else {
+                bucketData.sumOf { it.reps }.toDouble()
+            }
+
+            graphPoints[label] = value
+            groupedSets[label] = bucketData
+        }
+
+        return Pair(graphPoints, groupedSets)
+    }
 
     fun onAction(action: MetricsAction) {
         when (action) {
@@ -128,12 +185,32 @@ class MetricsViewModel(
             is MetricsAction.OnTypeSelected -> _filterState.update { state ->
                 state.copy(typeSelected = action.type)
             }
+
+            is MetricsAction.OnDeleteSet -> {
+                viewModelScope.launch {
+                    workoutRepository.deleteSet(action.setId)
+                    _internalState.update { it.copy(setIdToDelete = null) }
+                }
+            }
+
+            is MetricsAction.OnToggleExpandSet -> _internalState.update { state ->
+                val newExpanded = if (state.expandedSets.contains(action.label)) {
+                    state.expandedSets - action.label
+                } else {
+                    state.expandedSets + action.label
+                }
+                state.copy(expandedSets = newExpanded)
+            }
+
+            is MetricsAction.OnShowDeleteConfirmation -> _internalState.update { it.copy(setIdToDelete = action.setId) }
         }
     }
 
     private data class InternalState(
         val expandedList: Boolean = false,
         val muscleSelected: Muscle? = null,
+        val expandedSets: Set<String> = emptySet(),
+        val setIdToDelete: Int? = null
     )
 
     private data class FilterState(

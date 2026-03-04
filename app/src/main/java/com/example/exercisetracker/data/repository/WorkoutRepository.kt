@@ -4,6 +4,7 @@ package com.example.exercisetracker.data.repository
 
 import com.example.exercisetracker.data.local.dao.WorkoutDao
 import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
+import com.example.exercisetracker.data.local.entity.WorkoutSetEntity
 import com.example.exercisetracker.data.local.model.MetricGraphData
 import com.example.exercisetracker.data.local.model.WorkoutReview
 import com.example.exercisetracker.data.mapper.toDomain
@@ -75,6 +76,18 @@ class WorkoutRepository(
         workoutDao.updateSet(set.toEntity())
     }
 
+    override suspend fun deleteSet(setId: Int) {
+        val setEntity = WorkoutSetEntity(
+            id = setId,
+            sessionId = 0,
+            exerciseId = 0,
+            setNumber = 0,
+            weight = 0f,
+            reps = 0
+        )
+        workoutDao.deleteSet(setEntity)
+    }
+
     override fun getWorkoutDays(): Flow<Set<Int>> {
         val thisMonday = getDayOfWeek(1)
         val nextMonday = thisMonday.plusWeeks(1)
@@ -118,11 +131,12 @@ class WorkoutRepository(
 
         val startOfDayMillis = startOfDay.toMillis()
         val endOfDayMillis = endOfDay.toMillis()
-        return workoutDao.getWorkoutReviewExercises(startOfDayMillis, endOfDayMillis).map { reviews ->
-            reviews.map { review ->
-                review.exercises.map { it }
-            }.flatten().toSet()
-        }
+        return workoutDao.getWorkoutReviewExercises(startOfDayMillis, endOfDayMillis)
+            .map { reviews ->
+                reviews.map { review ->
+                    review.exercises.map { it }
+                }.flatten().toSet()
+            }
     }
 
     override suspend fun deleteWorkoutSession(day: Int) {

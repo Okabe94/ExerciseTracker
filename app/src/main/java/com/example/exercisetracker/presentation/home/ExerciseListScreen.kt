@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,9 +31,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -46,6 +47,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -57,7 +59,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -83,7 +84,26 @@ import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import com.example.exercisetracker.R
 import com.example.exercisetracker.core.presentation.util.ObserveAsEvents
-import com.example.exercisetracker.presentation.home.ExerciseListAction.*
+import com.example.exercisetracker.core.presentation.util.cap
+import com.example.exercisetracker.domain.model.Muscle
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnAddExercise
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnAddMuscle
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnDayNodeSelected
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnDeleteDayWorkout
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnDeletePlannedWorkout
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnExerciseSelected
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnMuscleSelected
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnNavigateToReview
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnRedoWorkout
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnResumeWorkout
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnReturnToWorkout
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnSaveWorkout
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowActiveWorkoutDialog
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowDeletePlannedDialog
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowDeleteWorkoutDialog
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowExerciseDialog
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnShowMuscleDialog
+import com.example.exercisetracker.presentation.home.ExerciseListAction.OnStartWorkout
 import com.example.exercisetracker.presentation.navigation.Navigator
 import com.example.exercisetracker.presentation.navigation.Route
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
@@ -226,10 +246,9 @@ fun ExerciseListScreen(
                     MuscleSection(
                         modifier = Modifier.weight(1f),
                         onAction = onAction,
-                        state = state
+                        muscles = state.muscleList,
+                        selectedMuscleIds = state.selectedMuscleIds
                     )
-
-                    VerticalDivider(modifier = Modifier.fillMaxHeight())
 
                     ExerciseSection(
                         modifier = Modifier.weight(1f),
@@ -240,9 +259,9 @@ fun ExerciseListScreen(
             } else {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     MuscleSection(
-                        modifier = Modifier.weight(1f),
                         onAction = onAction,
-                        state = state
+                        muscles = state.muscleList,
+                        selectedMuscleIds = state.selectedMuscleIds
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -415,24 +434,25 @@ private fun getDayNode(
 
 @Composable
 private fun MuscleSection(
-    modifier: Modifier = Modifier,
+    modifier : Modifier = Modifier,
     onAction: (ExerciseListAction) -> Unit,
-    state: ExerciseListState
+    muscles: List<Muscle>,
+    selectedMuscleIds: List<Int>,
 ) {
-    Section(
-        modifier = modifier,
-        key = { it.id },
-        isEmpty = state.muscleList.isEmpty(),
-        itemList = state.muscleList,
-        emptySection = {
-            EmptySection(text = stringResource(R.string.no_muscles_found))
-        },
-        titleSection = {
+    if (muscles.isEmpty()) {
+        EmptySection(text = stringResource(R.string.no_muscles_found))
+        return
+    }
+
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.muscles),
                 style = MaterialTheme.typography.titleLargeEmphasized,
                 fontWeight = FontWeight.Bold
             )
+
+            Spacer(modifier = Modifier.weight(1f))
 
             TextButton(
                 modifier = Modifier.padding(0.dp),
@@ -445,12 +465,16 @@ private fun MuscleSection(
                 )
             }
         }
-    ) {
-        SelectableAnimatedItem(
-            name = it.name,
-            isSelected = state.selectedMuscleIds.contains(it.id),
-            onSelect = { onAction(OnMuscleSelected(it.id)) }
-        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(muscles, key = { it.id }) { muscle ->
+                FilterChip(
+                    selected = selectedMuscleIds.contains(muscle.id),
+                    onClick = { onAction(OnMuscleSelected(muscle.id)) },
+                    label = { Text(muscle.name.cap()) }
+                )
+            }
+        }
+
     }
 }
 
@@ -526,7 +550,6 @@ private fun <T> Section(
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(150.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(
                     items = itemList,
@@ -749,11 +772,10 @@ private fun StartWorkoutButton() {
 }
 
 @Composable
-private fun ColumnScope.EmptySection(modifier: Modifier = Modifier, text: String) {
+private fun EmptySection(modifier: Modifier = Modifier, text: String) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .weight(1f)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -801,7 +823,7 @@ private fun SelectableAnimatedItem(
         Text(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(8.dp),
             text = name,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMediumEmphasized,

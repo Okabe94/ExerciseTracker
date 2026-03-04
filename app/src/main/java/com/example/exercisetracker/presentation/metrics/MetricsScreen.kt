@@ -6,6 +6,7 @@ import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,22 +52,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.exercisetracker.R
+import com.example.exercisetracker.core.presentation.util.cap
+import com.example.exercisetracker.data.local.model.MetricGraphData
 import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
-import com.example.exercisetracker.domain.model.WorkoutSet
 import com.example.exercisetracker.ui.theme.ExerciseTrackerTheme
 import ir.ehsannarmani.compose_charts.RowChart
 import ir.ehsannarmani.compose_charts.models.BarProperties
@@ -75,7 +77,6 @@ import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
 import ir.ehsannarmani.compose_charts.models.LabelProperties
 import ir.ehsannarmani.compose_charts.models.PopupProperties
 import ir.ehsannarmani.compose_charts.models.VerticalIndicatorProperties
-import java.util.Locale
 import java.util.Locale.getDefault
 
 @Composable
@@ -122,6 +123,11 @@ fun MetricsScreen(
                 )
             }
 
+            if (state.graphPoints.isEmpty()) {
+                item { EmptyDataSection() }
+                return@LazyColumn
+            }
+
             item {
                 ExerciseSummaryCard(
                     exerciseName = state.selectedExercise,
@@ -130,8 +136,6 @@ fun MetricsScreen(
                     estimated1RM = state.rm
                 )
             }
-
-            if (state.graphPoints.isEmpty()) return@LazyColumn
 
             item {
                 FilterSection(
@@ -152,47 +156,92 @@ fun MetricsScreen(
 
             item { Graph(mode = state.typeFilterSelected, data = state.graphPoints) }
 
-            item {
-                HistoricalSetRow(
-                    WorkoutSet(
-                        id = 1,
-                        sessionId = 1,
-                        exerciseId = 1,
-                        setNumber = 3,
-                        weight = 23f,
-                        reps = 2
+            state.groupedSets.forEach { (label, sets) ->
+                val isExpanded = state.expandedSets.contains(label)
+                item {
+                    ExpandableSetView(
+                        onClick = { onAction(MetricsAction.OnToggleExpandSet(it)) },
+                        label = label,
+                        isExpanded = isExpanded
                     )
-                ) { }
+                }
+                if (isExpanded) {
+                    items(sets) { set ->
+                        MetricSetRow(
+                            set = set,
+                            setNumber = sets.indexOf(set) + 1,
+                            onDeleteClick = { onAction(MetricsAction.OnShowDeleteConfirmation(it)) }
+                        )
+                    }
+                }
             }
+        }
+
+        if (state.showDeleteConfirmation && state.setIdToDelete != null) {
+            DeleteConfirmationDialog(
+                onDismiss = { onAction(MetricsAction.OnShowDeleteConfirmation(null)) },
+                onConfirm = { onAction(MetricsAction.OnDeleteSet(state.setIdToDelete)) }
+            )
         }
     }
 }
 
 @Composable
-fun SetInfoRow(
-    setNumber: Int,
-    weight: Float,
-    reps: Int,
-    unit: String = "lbs",
-    isLastSet: Boolean = false
+fun ExpandableSetView(
+    modifier: Modifier = Modifier,
+    onClick: (String) -> Unit,
+    label: String,
+    isExpanded: Boolean
 ) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick(label) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Icon(
+            imageVector = if (isExpanded)
+                ImageVector.vectorResource(R.drawable.outline_arrow_drop_up_24)
+            else
+                ImageVector.vectorResource(R.drawable.outline_arrow_drop_down_24),
+            contentDescription = if (isExpanded) "Collapse" else "Expand"
+        )
+    }
+}
+
+@Composable
+private fun MetricSetRow(
+    set: MetricGraphData,
+    setNumber: Int,
+    onDeleteClick: (Int) -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+
     ) {
-        // 1. Set Number Indicator
         Surface(
             shape = CircleShape,
-            color = Color(0xFF6650a4).copy(alpha = 0.1f), // Brand color light background
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
             modifier = Modifier.size(32.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = "$setNumber",
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color(0xFF6650a4), // Brand color text
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -200,21 +249,23 @@ fun SetInfoRow(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // 2. Weight Info
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = "Weight",
+                text = stringResource(R.string.weight),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = "$weight",
+                    text = "${set.weight}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = " $unit",
+                    text = " ${stringResource(R.string.kg)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 2.dp)
@@ -222,38 +273,89 @@ fun SetInfoRow(
             }
         }
 
-        // 3. Multiplication Sign (Visual Separator)
-        Text(
-            text = "×",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.outlineVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-
-        // 4. Reps Info
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = "Reps",
+                text = stringResource(R.string.reps),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "$reps",
+                text = "${set.reps}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
         }
 
-        // This is where you'd put the Three-Dot menu icon we discussed!
+        Box {
+            IconButton(onClick = { showMenu = true }) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.outline_more_vert_24),
+                    contentDescription = "Options"
+                )
+            }
+
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(R.string.delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    onClick = {
+                        showMenu = false
+                        onDeleteClick(set.id)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.delete_set_dialog_title)) },
+        text = { Text(stringResource(R.string.delete_set_dialog_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(id = R.string.delete),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun SetInfoRow(
+    setNumber: Int,
+    weight: Float,
+    reps: Int,
+    unit: String = "lbs",
+    isLastSet: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
     }
 
-    if (!isLastSet) {
-        HorizontalDivider(
-            modifier = Modifier.padding(start = 48.dp, top = 4.dp),
-            thickness = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-    }
 }
 
 @Composable
@@ -273,7 +375,7 @@ private fun ExerciseSelectorHeader(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Text(
-            text = stringResource(R.string.select_exercise),
+            text = stringResource(R.string.muscles_filter),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -458,11 +560,11 @@ private fun GraphMetricToggle(
 ) {
     val options = mapOf(
         TypeFilter.WEIGHT to Pair(
-            stringResource(R.string.weight),
+            stringResource(R.string.graph_weight_label),
             ImageVector.vectorResource(R.drawable.outline_scale_24)
         ),
         TypeFilter.REPS to Pair(
-            stringResource(R.string.reps),
+            stringResource(R.string.graph_reps_label),
             ImageVector.vectorResource(R.drawable.outline_repeat_24)
         )
     )
@@ -488,6 +590,33 @@ private fun GraphMetricToggle(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDataSection(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .padding(top = 24.dp)
+                .align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                modifier = Modifier.size(48.dp),
+                imageVector = ImageVector.vectorResource(R.drawable.outline_data_usage_24),
+                contentDescription = null
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.metrics_empty_section_message),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -519,7 +648,7 @@ private fun Graph(
         modifier = modifier
             .fillMaxWidth()
             .height(height.dp)
-            .padding(top = 16.dp),
+            .padding(top = 8.dp),
         data = data.map { (key, value) ->
             Bars(
                 label = key,
@@ -528,7 +657,7 @@ private fun Graph(
                         value = value,
                         color = Brush.horizontalGradient(
                             listOf(
-                                MaterialTheme.colorScheme.onSecondary,
+                                MaterialTheme.colorScheme.tertiary,
                                 MaterialTheme.colorScheme.primary,
                             )
                         )
@@ -562,73 +691,10 @@ private fun Graph(
             contentBuilder = { popUp ->
                 "${String.format(getDefault(), "%.2f", popUp.value)} $dataLabel"
             },
-            textStyle = style
+            textStyle = style,
+            containerColor = MaterialTheme.colorScheme.surface
         )
     )
-}
-
-@Composable
-fun HistoricalSetRow(
-    set: WorkoutSet,
-    onDeleteConfirmed: (WorkoutSet) -> Unit
-) {
-    var showMenu by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        with(set) {
-            SetInfoRow(
-                setNumber = setNumber,
-                weight = weight,
-                reps = reps,
-                unit = stringResource(R.string.kg),
-                isLastSet = false
-            )
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        IconButton(onClick = { showMenu = true }) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.outline_more_vert_24),
-                contentDescription = "Options"
-            )
-        }
-
-        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-            DropdownMenuItem(
-                text = { Text("Delete Set", color = Color.Red) },
-                onClick = {
-                    showMenu = false
-                    showDialog = true
-                }
-            )
-        }
-    }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Delete Historical Data?") },
-            text = { Text("This will permanently remove this set and update your progress charts.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDeleteConfirmed(set)
-                    showDialog = false
-                }) {
-                    Text("Delete", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
-            }
-        )
-    }
 }
 
 @Preview(uiMode = UI_MODE_NIGHT_YES)
@@ -651,11 +717,5 @@ private fun Preview() {
             onAction = {}
         )
     }
-}
-
-private fun String.cap(): String = this.replaceFirstChar {
-    if (it.isLowerCase()) it.titlecase(
-        getDefault()
-    ) else it.toString()
 }
 

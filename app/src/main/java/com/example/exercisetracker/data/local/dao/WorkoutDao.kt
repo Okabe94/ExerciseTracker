@@ -1,6 +1,7 @@
 package com.example.exercisetracker.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -28,6 +29,9 @@ interface WorkoutDao {
 
     @Update
     suspend fun updateSet(set: WorkoutSetEntity)
+
+    @Delete
+    suspend fun deleteSet(set: WorkoutSetEntity)
 
     @Query("SELECT id FROM workout_sessions WHERE isCompleted = 0 ORDER BY startTime DESC LIMIT 1")
     suspend fun getActiveSessionId(): Int?
@@ -70,7 +74,7 @@ interface WorkoutDao {
     @Query("SELECT startTime FROM workout_sessions WHERE isCompleted = 1 AND endTime IS NOT NULL AND startTime BETWEEN :firstDay AND :lastDay")
     fun getWorkoutDays(firstDay: Long, lastDay: Long): Flow<List<Long>>
 
-    @Query("SELECT startTime, weight, reps FROM workout_sessions INNER JOIN workout_sets ON workout_sessions.id = workout_sets.sessionId WHERE isCompleted = 1 AND startTime BETWEEN :startTime AND :endTime AND exerciseId = :exerciseId ORDER BY startTime ASC")
+    @Query("SELECT workout_sets.id, startTime, weight, reps FROM workout_sessions INNER JOIN workout_sets ON workout_sessions.id = workout_sets.sessionId WHERE isCompleted = 1 AND startTime BETWEEN :startTime AND :endTime AND exerciseId = :exerciseId ORDER BY startTime ASC")
     fun getGraphData(startTime: Long, endTime: Long, exerciseId: Int): Flow<List<MetricGraphData>>
 
     @Query("DELETE FROM workout_sessions WHERE startTime >= :startTime AND startTime <= :endTime ")

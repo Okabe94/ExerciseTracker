@@ -1,5 +1,6 @@
 package com.example.exercisetracker.presentation.metrics
 
+import com.example.exercisetracker.data.local.model.MetricGraphData
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.filter.TimeFilter
@@ -17,7 +18,9 @@ data class MetricsState(
     val typeFilterSelected: TypeFilter = TypeFilter.REPS,
     val timeFilterSelected: TimeFilter = TimeFilter.ALL,
     val timeFilterOptions: List<TimeFilter> = emptyList(),
-    val graphPoints: Map<String, Double> = emptyMap()
+    val graphPoints: Map<String, Double> = emptyMap(),
+    val groupedSets: Map<String, List<MetricGraphData>> = emptyMap(),
+    val expandedSets: Set<String> = emptySet(),
+    val showDeleteConfirmation: Boolean = false,
+    val setIdToDelete: Int? = null
 )
-
-
