@@ -56,6 +56,24 @@ class MetricsViewModel(
         }
     }
 
+    private data class ProcessedExerciseData(
+        val rawData: List<MetricGraphData>,
+        val graphPoints: GraphData,
+        val groupedSets: Map<String, List<MetricGraphData>>
+    )
+
+    private val _processedGraphData = combine(
+        _filterState,
+        _graphDataState
+    ) { filter, graph ->
+        val (points, grouped) = processGraphData(graph, filter.timeSelected, filter.typeSelected)
+        ProcessedExerciseData(
+            rawData = graph,
+            graphPoints = GraphData(points),
+            groupedSets = grouped
+        )
+    }
+
     private val _bestSetState = _filterState.flatMapLatest { filters ->
         if (filters.selectedExercise != null)
             workoutRepository.getBestSet(filters.selectedExercise.id)
@@ -86,9 +104,9 @@ class MetricsViewModel(
         _musclesAndExercises,
         _filterState,
         _internalState,
-        _graphDataState,
+        _processedGraphData,
         _bestSetState
-    ) { musclesAndExercises, filter, internal, graph, bestSet ->
+    ) { musclesAndExercises, filter, internal, processedData, bestSet ->
         val filteredExercises =
             if (internal.muscleSelected != null) {
                 musclesAndExercises.second.filter { it.targetMuscleId == internal.muscleSelected.id }
@@ -96,6 +114,7 @@ class MetricsViewModel(
                 musclesAndExercises.second
             }
 
+        val graph = processedData.rawData
         val maxWeight = graph.maxOfOrNull { it.weight } ?: 0f
         val averageReps = if (graph.isEmpty()) 0 else {
             try {
@@ -119,12 +138,6 @@ class MetricsViewModel(
         }
         val prDate = bestSet?.let { clock.getDateLabelFromMillis(it.startTime) } ?: ""
 
-        val processedData = processGraphData(
-            data = graph,
-            timeFilter = filter.timeSelected,
-            typeFilter = filter.typeSelected
-        )
-
         MetricsState(
             filteredMuscleId = internal.muscleSelected?.id ?: 0,
             selectedExercise = filter.selectedExercise,
@@ -137,8 +150,8 @@ class MetricsViewModel(
             timeFilterSelected = filter.timeSelected,
             timeFilterOptions = filter.timeFilterOptions,
             typeFilterSelected = filter.typeSelected,
-            graphPoints = processedData.first,
-            groupedSets = processedData.second,
+            graphPoints = processedData.graphPoints,
+            groupedSets = processedData.groupedSets,
             expandedSets = internal.expandedSets,
             showDeleteConfirmation = internal.setIdToDelete != null,
             setIdToDelete = internal.setIdToDelete,

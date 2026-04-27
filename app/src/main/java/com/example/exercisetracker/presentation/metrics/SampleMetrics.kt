@@ -35,14 +35,16 @@ val sampleMetricsState = MetricsState(
         TimeFilter.SIX_MONTH,
         TimeFilter.ONE_YEAR
     ),
-    graphPoints = mapOf(
-        "20/Feb" to 5.0,
-        "21/Feb" to 5.0,
-        "22/Feb" to 1.0,
-        "23/Feb" to 5.0,
-        "24/Feb" to 2.0,
-        "25/Feb" to 1.0,
-        "26/Feb" to 1.5
+    graphPoints = GraphData(
+        mapOf(
+            "20/Feb" to 5.0,
+            "21/Feb" to 5.0,
+            "22/Feb" to 1.0,
+            "23/Feb" to 5.0,
+            "24/Feb" to 2.0,
+            "25/Feb" to 1.0,
+            "26/Feb" to 1.5
+        )
     ),
     totalVolume = 12500.0,
     totalSessions = 8,

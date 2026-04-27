@@ -132,7 +132,7 @@ fun MetricsScreen(
                 )
             }
 
-            if (state.graphPoints.isEmpty()) {
+            if (state.graphPoints.entries.isEmpty()) {
                 item { EmptyDataSection() }
                 return@LazyColumn
             }
@@ -737,9 +737,9 @@ private fun EmptyDataSection(modifier: Modifier = Modifier) {
 private fun Graph(
     modifier: Modifier = Modifier,
     mode: TypeFilter,
-    data: Map<String, Double>,
+    data: GraphData,
 ) {
-    if (data.isEmpty()) return
+    if (data.entries.isEmpty()) return
 
     val dataLabel = when (mode) {
         TypeFilter.REPS -> stringResource(R.string.reps_small)
@@ -755,62 +755,64 @@ private fun Graph(
         )
     }
 
-    val height = data.keys.size * 60
+    val height = data.entries.size * 60
 
-    key(data) { RowChart(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(height.dp)
-            .padding(top = 8.dp),
-        data = data.map { (key, value) ->
-            Bars(
-                label = key,
-                values = listOf(
-                    Bars.Data(
-                        value = value,
-                        color = Brush.horizontalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.tertiary,
-                                MaterialTheme.colorScheme.primary,
+    key(data) {
+        RowChart(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(height.dp)
+                .padding(top = 8.dp),
+            data = data.entries.map { (key, value) ->
+                Bars(
+                    label = key,
+                    values = listOf(
+                        Bars.Data(
+                            value = value,
+                            color = Brush.horizontalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.tertiary,
+                                    MaterialTheme.colorScheme.primary,
+                                )
                             )
                         )
                     )
                 )
-            )
-        },
-        barProperties = BarProperties(
-            cornerRadius = Bars.Data.Radius.Rectangle(topRight = 6.dp, topLeft = 6.dp),
-            spacing = 3.dp,
-            thickness = 20.dp
-        ),
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        indicatorProperties = VerticalIndicatorProperties(
-            textStyle = style,
-            contentBuilder = { value ->
-                String.format(getDefault(), "%,.0f", value)
-            }
-        ),
-        labelProperties = LabelProperties(
-            enabled = true,
-            textStyle = style,
-            labels = data.keys.toList()
-        ),
-        labelHelperProperties = LabelHelperProperties(
-            enabled = false,
-            textStyle = style
-        ),
-        popupProperties = PopupProperties(
-            enabled = true,
-            contentBuilder = { popUp ->
-                "${String.format(getDefault(), "%,.0f", popUp.value)} $dataLabel"
             },
-            textStyle = style,
-            containerColor = MaterialTheme.colorScheme.surface
+            barProperties = BarProperties(
+                cornerRadius = Bars.Data.Radius.Rectangle(topRight = 6.dp, topLeft = 6.dp),
+                spacing = 3.dp,
+                thickness = 20.dp
+            ),
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            ),
+            indicatorProperties = VerticalIndicatorProperties(
+                textStyle = style,
+                contentBuilder = { value ->
+                    String.format(getDefault(), "%,.0f", value)
+                }
+            ),
+            labelProperties = LabelProperties(
+                enabled = true,
+                textStyle = style,
+                labels = data.entries.keys.toList()
+            ),
+            labelHelperProperties = LabelHelperProperties(
+                enabled = false,
+                textStyle = style
+            ),
+            popupProperties = PopupProperties(
+                enabled = true,
+                contentBuilder = { popUp ->
+                    "${String.format(getDefault(), "%,.0f", popUp.value)} $dataLabel"
+                },
+                textStyle = style,
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         )
-    ) }
+    }
 }
 
 @Preview(uiMode = UI_MODE_NIGHT_YES)

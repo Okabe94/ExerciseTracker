@@ -1,10 +1,14 @@
 package com.example.exercisetracker.presentation.metrics
 
+import androidx.compose.runtime.Immutable
 import com.example.exercisetracker.data.local.model.MetricGraphData
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
 import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.filter.TypeFilter
+
+@Immutable
+data class GraphData(val entries: Map<String, Double> = emptyMap())
 
 data class MetricsState(
     val filteredMuscleId: Int = 0,
@@ -18,7 +22,7 @@ data class MetricsState(
     val typeFilterSelected: TypeFilter = TypeFilter.REPS,
     val timeFilterSelected: TimeFilter = TimeFilter.ALL,
     val timeFilterOptions: List<TimeFilter> = emptyList(),
-    val graphPoints: Map<String, Double> = emptyMap(),
+    val graphPoints: GraphData = GraphData(),
     val groupedSets: Map<String, List<MetricGraphData>> = emptyMap(),
     val expandedSets: Set<String> = emptySet(),
     val showDeleteConfirmation: Boolean = false,
