@@ -3,12 +3,14 @@ package com.example.exercisetracker.di
 import com.example.exercisetracker.data.local.ExerciseDatabase
 import com.example.exercisetracker.data.repository.ExerciseRepository
 import com.example.exercisetracker.data.repository.MuscleRepository
+import com.example.exercisetracker.data.repository.RoutineRepository
 import com.example.exercisetracker.data.repository.WorkoutPlanRepository
 import com.example.exercisetracker.data.repository.WorkoutRepository
 import com.example.exercisetracker.data.time.ExerciseClock
 import com.example.exercisetracker.data.timezone.ExerciseTimeZone
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
+import com.example.exercisetracker.domain.repository.IRoutineRepository
 import com.example.exercisetracker.domain.repository.IWorkoutPlanRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import com.example.exercisetracker.domain.time.AppClock
@@ -30,6 +32,7 @@ val appModule = module {
     single { get<ExerciseDatabase>().muscleDao() }
     single { get<ExerciseDatabase>().workoutDao() }
     single { get<ExerciseDatabase>().workoutPlanDao() }
+    single { get<ExerciseDatabase>().routineDao() }
 
     // Helpers
     singleOf(::ExerciseTimeZone) bind AppTimeZone::class
@@ -40,6 +43,7 @@ val appModule = module {
     singleOf(::MuscleRepository) bind IMuscleRepository::class
     singleOf(::WorkoutRepository) bind IWorkoutRepository::class
     singleOf(::WorkoutPlanRepository) bind IWorkoutPlanRepository::class
+    singleOf(::RoutineRepository) bind IRoutineRepository::class
 
     // ViewModel
     viewModelOf(::ExerciseListViewModel)

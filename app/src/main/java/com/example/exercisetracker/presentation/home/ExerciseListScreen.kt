@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package com.example.exercisetracker.presentation.home
 
@@ -45,11 +45,16 @@ import androidx.compose.material3.ButtonShapes
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -118,7 +123,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun ExerciseListRoot(
     navigator: Navigator,
-    viewModel: ExerciseListViewModel = koinViewModel()
+    viewModel: ExerciseListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -130,7 +135,8 @@ fun ExerciseListRoot(
             when (it) {
                 is OnStartWorkout,
                 is OnResumeWorkout,
-                OnStartPlannedWorkout -> navigator.navigate(Route.Workout)
+                OnStartPlannedWorkout,
+                    -> navigator.navigate(Route.Workout)
 
                 is OnNavigateToReview -> navigator.navigate(Route.Review(it.day))
                 else -> Unit
@@ -196,11 +202,10 @@ fun ExerciseListScreen(
                 .padding(bottom = 16.dp)
         ) {
             if (state.addExerciseDialogVisible) {
-                AddNameDialog(
-                    title = stringResource(R.string.add_exercise),
-                    label = stringResource(R.string.exercise_name),
+                AddExerciseDialog(
+                    muscles = state.muscleList,
                     onDismiss = { onAction(OnShowExerciseDialog(false)) },
-                    onConfirm = { name -> onAction(OnAddExercise(name)) }
+                    onConfirm = { name, muscleId -> onAction(OnAddExercise(name, muscleId)) }
                 )
             }
 
@@ -249,6 +254,10 @@ fun ExerciseListScreen(
                 )
             }
 
+            if (state.routinesSheetVisible) {
+                RoutinesBottomSheet(state = state, onAction = onAction)
+            }
+
             val adaptiveInfo = currentWindowAdaptiveInfo()
             if (adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND)) {
                 Row(
@@ -256,14 +265,22 @@ fun ExerciseListScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     MuscleSection(
-                        modifier = Modifier.weight(1f),
                         onAction = onAction,
                         muscles = state.muscleList,
                         selectedMuscleIds = state.selectedMuscleIds
                     )
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SecondaryButtonLayout(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onAction(ExerciseListAction.OnOpenRoutinesSheet) },
+                        content = { RoutinesButton() }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     ExerciseSection(
-                        modifier = Modifier.weight(1f),
                         onAction = onAction,
                         state = state
                     )
@@ -276,7 +293,15 @@ fun ExerciseListScreen(
                         selectedMuscleIds = state.selectedMuscleIds
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SecondaryButtonLayout(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onAction(ExerciseListAction.OnOpenRoutinesSheet) },
+                        content = { RoutinesButton() }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     ExerciseSection(
                         modifier = Modifier.weight(1f),
@@ -295,7 +320,7 @@ fun handleEvents(
     event: ExerciseListEvent,
     snackState: SnackbarHostState,
     context: Context,
-    scope: CoroutineScope
+    scope: CoroutineScope,
 ) {
     if (event is ExerciseListEvent.SendToReview) {
         onAction(OnNavigateToReview(event.day))
@@ -320,7 +345,7 @@ private fun WorkoutWeekCalendar(
     plannedDays: Set<Int>,
     currentDay: Int,
     daySelected: Int,
-    mode: ScreenMode
+    mode: ScreenMode,
 ) {
     val days = listOf("L", "M", "X", "J", "V", "S", "D")
 
@@ -403,7 +428,7 @@ private fun WorkoutWeekCalendar(
 @Composable
 private fun DayNode(
     onClick: () -> Unit,
-    node: BasicDayNode
+    node: BasicDayNode,
 ) {
     Column(
         modifier = node
@@ -434,7 +459,7 @@ private fun getDayNode(
     isToday: Boolean,
     isWeekDone: Boolean,
     isPlanned: Boolean,
-    isPlanning: Boolean
+    isPlanning: Boolean,
 ): BasicDayNode = when {
     isPlanned -> PlannedWorkoutDayNode
     isPlanning -> PlanningWorkoutDayNode
@@ -446,7 +471,7 @@ private fun getDayNode(
 
 @Composable
 private fun MuscleSection(
-    modifier : Modifier = Modifier,
+    modifier: Modifier = Modifier,
     onAction: (ExerciseListAction) -> Unit,
     muscles: List<Muscle>,
     selectedMuscleIds: List<Int>,
@@ -456,6 +481,14 @@ private fun MuscleSection(
         return
     }
 
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    val displayText = if (selectedMuscleIds.isEmpty()) {
+        stringResource(R.string.muscles_filter)
+    } else {
+        muscles.filter { it.id in selectedMuscleIds }.joinToString(", ") { it.name.cap() }
+    }
+
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -463,13 +496,11 @@ private fun MuscleSection(
                 style = MaterialTheme.typography.titleLargeEmphasized,
                 fontWeight = FontWeight.Bold
             )
-
             Spacer(modifier = Modifier.weight(1f))
-
             TextButton(
                 modifier = Modifier.padding(0.dp),
                 contentPadding = PaddingValues(0.dp),
-                onClick = { onAction(OnShowExerciseDialog(true)) }
+                onClick = { onAction(OnShowMuscleDialog(true)) }
             ) {
                 Text(
                     modifier = Modifier.padding(horizontal = 8.dp),
@@ -477,16 +508,41 @@ private fun MuscleSection(
                 )
             }
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(muscles, key = { it.id }) { muscle ->
-                FilterChip(
-                    selected = selectedMuscleIds.contains(muscle.id),
-                    onClick = { onAction(OnMuscleSelected(muscle.id)) },
-                    label = { Text(muscle.name.cap()) }
-                )
+
+        ExposedDropdownMenuBox(
+            expanded = dropdownExpanded,
+            onExpandedChange = { dropdownExpanded = it }
+        ) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                value = displayText,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+            )
+            ExposedDropdownMenu(
+                expanded = dropdownExpanded,
+                onDismissRequest = { dropdownExpanded = false }
+            ) {
+                muscles.forEach { muscle ->
+                    DropdownMenuItem(
+                        text = { Text(muscle.name.cap()) },
+                        onClick = { onAction(OnMuscleSelected(muscle.id)) },
+                        trailingIcon = {
+                            if (selectedMuscleIds.contains(muscle.id)) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.outline_check_24),
+                                    contentDescription = null
+                                )
+                            }
+                        }
+                    )
+                }
             }
         }
-
     }
 }
 
@@ -494,7 +550,7 @@ private fun MuscleSection(
 private fun ExerciseSection(
     modifier: Modifier = Modifier,
     onAction: (ExerciseListAction) -> Unit,
-    state: ExerciseListState
+    state: ExerciseListState,
 ) {
     Section(
         modifier = modifier,
@@ -511,17 +567,15 @@ private fun ExerciseSection(
                 fontWeight = FontWeight.Bold
             )
 
-            if (state.selectedMuscleIds.size == 1) {
-                TextButton(
-                    modifier = Modifier.padding(0.dp),
-                    contentPadding = PaddingValues(0.dp),
-                    onClick = { onAction(OnShowExerciseDialog(true)) }
-                ) {
-                    Text(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        text = stringResource(R.string.add_exercise)
-                    )
-                }
+            TextButton(
+                modifier = Modifier.padding(0.dp),
+                contentPadding = PaddingValues(0.dp),
+                onClick = { onAction(OnShowExerciseDialog(true)) }
+            ) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    text = stringResource(R.string.add_exercise)
+                )
             }
         }
     ) {
@@ -541,7 +595,7 @@ private fun <T> Section(
     emptySection: @Composable ColumnScope.() -> Unit,
     itemList: List<T>,
     key: (T) -> Any,
-    itemContent: @Composable (T) -> Unit
+    itemContent: @Composable (T) -> Unit,
 ) {
     Column(modifier = modifier) {
         Row(
@@ -576,7 +630,7 @@ private fun <T> Section(
 private fun ActionsSection(
     modifier: Modifier = Modifier,
     onAction: (ExerciseListAction) -> Unit,
-    state: ExerciseListState
+    state: ExerciseListState,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -594,7 +648,7 @@ private fun ActionsSection(
 @Composable
 private fun RowScope.ReviewActionButtons(
     onAction: (ExerciseListAction) -> Unit,
-    state: ExerciseListState
+    state: ExerciseListState,
 ) {
     SecondaryButtonLayout(
         modifier = Modifier.weight(1f),
@@ -620,7 +674,7 @@ private fun RowScope.ReviewActionButtons(
 @Composable
 private fun RowScope.PlanningActionButtons(
     onAction: (ExerciseListAction) -> Unit,
-    state: ExerciseListState
+    state: ExerciseListState,
 ) {
     val isUpdate =
         state.screenMode is ScreenMode.Planning && state.screenMode.day in state.plannedWorkouts
@@ -651,7 +705,7 @@ private fun RowScope.PlanningActionButtons(
 @Composable
 private fun RowScope.WorkoutActionButtons(
     onAction: (ExerciseListAction) -> Unit,
-    state: ExerciseListState
+    state: ExerciseListState,
 ) {
     if (state.selectedExerciseIds.isNotEmpty()) {
         PrimaryButtonLayout(
@@ -683,7 +737,7 @@ private fun PrimaryButtonLayout(
     modifier: Modifier = Modifier,
     containerColor: Color = Color.Unspecified,
     onClick: () -> Unit,
-    content: @Composable RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit,
 ) {
     FilledTonalButton(
         modifier = modifier,
@@ -701,7 +755,7 @@ private fun PrimaryButtonLayout(
 private fun SecondaryButtonLayout(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    content: @Composable RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit,
 ) {
     OutlinedButton(
         modifier = modifier,
@@ -784,6 +838,14 @@ private fun StartWorkoutButton() {
 }
 
 @Composable
+private fun RoutinesButton() {
+    IconTextActionButton(
+        icon = ImageVector.vectorResource(R.drawable.outline_repeat_24),
+        text = stringResource(id = R.string.routines)
+    )
+}
+
+@Composable
 private fun EmptySection(modifier: Modifier = Modifier, text: String) {
     Box(
         modifier = modifier
@@ -800,7 +862,7 @@ private fun EmptySection(modifier: Modifier = Modifier, text: String) {
 }
 
 @Composable
-private fun SelectableAnimatedItem(
+internal fun SelectableAnimatedItem(
     modifier: Modifier = Modifier,
     isSelected: Boolean,
     onSelect: () -> Unit,
@@ -908,11 +970,82 @@ private fun DeleteConfirmationDialog(
 }
 
 @Composable
+private fun AddExerciseDialog(
+    muscles: List<Muscle>,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, muscleId: Int) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    var selectedMuscle by remember { mutableStateOf<Muscle?>(null) }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.add_exercise)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.exercise_name)) },
+                    singleLine = true
+                )
+
+                ExposedDropdownMenuBox(
+                    expanded = dropdownExpanded,
+                    onExpandedChange = { dropdownExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        value = selectedMuscle?.name?.cap() ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.muscles)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false }
+                    ) {
+                        muscles.forEach { muscle ->
+                            DropdownMenuItem(
+                                text = { Text(muscle.name.cap()) },
+                                onClick = {
+                                    selectedMuscle = muscle
+                                    dropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = name.isNotBlank() && selectedMuscle != null,
+                onClick = { onConfirm(name, selectedMuscle!!.id) }
+            ) {
+                Text(stringResource(R.string.add))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
 private fun AddNameDialog(
     title: String,
     label: String,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
 
@@ -1037,7 +1170,7 @@ private fun ExerciseListScreenPreview() {
 private fun showSnackBarMessage(
     scope: CoroutineScope,
     hostState: SnackbarHostState,
-    message: String
+    message: String,
 ) {
     scope.launch {
         hostState.currentSnackbarData?.dismiss()

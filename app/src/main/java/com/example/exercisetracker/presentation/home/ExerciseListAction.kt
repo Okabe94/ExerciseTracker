@@ -1,5 +1,7 @@
 package com.example.exercisetracker.presentation.home
 
+import com.example.exercisetracker.domain.model.Routine
+
 sealed interface ExerciseListAction {
     data object OnResumeWorkout : ExerciseListAction
     data object OnStartWorkout : ExerciseListAction
@@ -13,7 +15,7 @@ sealed interface ExerciseListAction {
     data class OnDayNodeSelected(val day: Int) : ExerciseListAction
     data class OnMuscleSelected(val muscleId: Int) : ExerciseListAction
     data class OnExerciseSelected(val exerciseId: Int) : ExerciseListAction
-    data class OnAddExercise(val name: String) : ExerciseListAction
+    data class OnAddExercise(val name: String, val muscleId: Int) : ExerciseListAction
     data class OnAddMuscle(val name: String) : ExerciseListAction
 
     data class OnShowDeletePlannedDialog(val show: Boolean) : ExerciseListAction
@@ -23,4 +25,15 @@ sealed interface ExerciseListAction {
     data class OnShowExerciseDialog(val show: Boolean) : ExerciseListAction
     data class OnShowPlannedTodayDialog(val show: Boolean) : ExerciseListAction
     data object OnStartPlannedWorkout : ExerciseListAction
+
+    data object OnOpenRoutinesSheet : ExerciseListAction
+    data object OnCloseRoutinesSheet : ExerciseListAction
+    data class OnNavigateToRoutineEditor(val routineId: Int?) : ExerciseListAction
+    data object OnNavigateBackToRoutineList : ExerciseListAction
+    data class OnRoutineNameChanged(val name: String) : ExerciseListAction
+    data class OnRoutineEditorMuscleSelected(val muscleId: Int) : ExerciseListAction
+    data class OnRoutineEditorExerciseSelected(val exerciseId: Int) : ExerciseListAction
+    data object OnSaveRoutine : ExerciseListAction
+    data class OnDeleteRoutine(val routineId: Int) : ExerciseListAction
+    data class OnApplyRoutine(val routine: Routine) : ExerciseListAction
 }

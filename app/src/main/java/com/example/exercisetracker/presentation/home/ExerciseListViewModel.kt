@@ -6,9 +6,11 @@ import com.example.exercisetracker.R
 import com.example.exercisetracker.core.presentation.util.UiText
 import com.example.exercisetracker.domain.model.Exercise
 import com.example.exercisetracker.domain.model.Muscle
+import com.example.exercisetracker.domain.model.Routine
 import com.example.exercisetracker.domain.model.WorkoutPlan
 import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
+import com.example.exercisetracker.domain.repository.IRoutineRepository
 import com.example.exercisetracker.domain.repository.IWorkoutPlanRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import com.example.exercisetracker.domain.time.AppClock
@@ -28,7 +30,8 @@ class ExerciseListViewModel(
     private val muscleRepository: IMuscleRepository,
     private val exerciseRepository: IExerciseRepository,
     private val workoutRepository: IWorkoutRepository,
-    private val planRepository: IWorkoutPlanRepository
+    private val planRepository: IWorkoutPlanRepository,
+    private val routineRepository: IRoutineRepository
 ) : ViewModel() {
 
     private val _workoutWeek = workoutRepository.getWorkoutDays()
@@ -48,6 +51,11 @@ class ExerciseListViewModel(
 
     init {
         checkTodayPlannedWorkout()
+        viewModelScope.launch {
+            routineRepository.getAllRoutines().collect { list ->
+                _internalState.update { it.copy(routines = list) }
+            }
+        }
     }
 
     private fun checkTodayPlannedWorkout() {
@@ -87,6 +95,12 @@ class ExerciseListViewModel(
             internal.daySelected
         }
 
+        val routineEditorExercises = if (internal.routineEditorState.selectedMuscleIds.isEmpty()) {
+            musclesAndExercises.second
+        } else {
+            musclesAndExercises.second.filter { it.targetMuscleId in internal.routineEditorState.selectedMuscleIds }
+        }
+
         ExerciseListState(
             screenMode = internal.screenMode,
             workoutDaysDone = daysDone,
@@ -95,6 +109,7 @@ class ExerciseListViewModel(
             daySelected = daySelected,
             muscleList = musclesAndExercises.first,
             exerciseList = filteredExercises,
+            allExercises = routineEditorExercises,
             hasActiveWorkout = activeWorkout != null,
             activeWorkoutDialogVisible = internal.activeWorkoutDialogVisible,
             deletePlanDialogVisible = internal.deletePlanDialogVisible,
@@ -106,6 +121,10 @@ class ExerciseListViewModel(
             selectedExerciseIds = internal.selectedExerciseIds.toList(),
             addMuscleDialogVisible = internal.muscleDialogVisible,
             addExerciseDialogVisible = internal.exerciseDialogVisible,
+            routines = internal.routines,
+            routinesSheetVisible = internal.routinesSheetVisible,
+            routineSheetContent = internal.routineSheetContent,
+            routineEditorState = internal.routineEditorState,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -121,7 +140,7 @@ class ExerciseListViewModel(
             ExerciseListAction.OnRedoWorkout -> redoWorkout()
             is ExerciseListAction.OnSaveWorkout -> saveWorkout(action.isUpdate)
             is ExerciseListAction.OnAddMuscle -> addMuscle(action.name)
-            is ExerciseListAction.OnAddExercise -> addExercise(action.name)
+            is ExerciseListAction.OnAddExercise -> addExercise(action.name, action.muscleId)
             is ExerciseListAction.OnDayNodeSelected -> dayNodeAction(action.day)
             is ExerciseListAction.OnShowActiveWorkoutDialog -> toggleActiveWorkoutDialog(action.show)
             is ExerciseListAction.OnShowDeletePlannedDialog -> toggleDeletePlanDialog(action.show)
@@ -160,6 +179,23 @@ class ExerciseListViewModel(
                 }
                 startWorkout()
             }
+
+            ExerciseListAction.OnOpenRoutinesSheet -> _internalState.update {
+                it.copy(routinesSheetVisible = true)
+            }
+            ExerciseListAction.OnCloseRoutinesSheet -> closeRoutinesSheet()
+            is ExerciseListAction.OnNavigateToRoutineEditor -> openRoutineEditor(action.routineId)
+            ExerciseListAction.OnNavigateBackToRoutineList -> _internalState.update {
+                it.copy(routineSheetContent = RoutineSheetContent.List)
+            }
+            is ExerciseListAction.OnRoutineNameChanged -> _internalState.update {
+                it.copy(routineEditorState = it.routineEditorState.copy(name = action.name))
+            }
+            is ExerciseListAction.OnRoutineEditorMuscleSelected -> toggleRoutineEditorMuscle(action.muscleId)
+            is ExerciseListAction.OnRoutineEditorExerciseSelected -> toggleRoutineEditorExercise(action.exerciseId)
+            ExerciseListAction.OnSaveRoutine -> saveRoutine()
+            is ExerciseListAction.OnDeleteRoutine -> deleteRoutine(action.routineId)
+            is ExerciseListAction.OnApplyRoutine -> applyRoutine(action.routine)
 
             else -> Unit
         }
@@ -358,16 +394,6 @@ class ExerciseListViewModel(
         }
     }
 
-    private fun addExercise(name: String) {
-        val muscles = _internalState.value.selectedMuscleIds
-
-        if (name.isBlank()) return
-        if (muscles.size != 1) return
-
-        addExercise(name, muscles.first())
-        _internalState.update { state -> state.copy(exerciseDialogVisible = false) }
-    }
-
     private fun addMuscle(name: String) {
         if (name.isBlank()) return
 
@@ -379,9 +405,94 @@ class ExerciseListViewModel(
 
     private fun addExercise(name: String, muscleId: Int) {
         viewModelScope.launch {
-            exerciseRepository.insert(
-                Exercise(name = name, targetMuscleId = muscleId)
+            exerciseRepository.insert(Exercise(name = name, targetMuscleId = muscleId))
+        }
+        _internalState.update { state -> state.copy(exerciseDialogVisible = false) }
+    }
+
+    private fun openRoutineEditor(routineId: Int?) {
+        val editorState = if (routineId != null) {
+            val existing = _internalState.value.routines.firstOrNull { it.id == routineId }
+            RoutineEditorState(
+                name = existing?.name.orEmpty(),
+                selectedExerciseIds = existing?.exerciseIds.orEmpty().toSet()
             )
+        } else {
+            RoutineEditorState()
+        }
+        _internalState.update {
+            it.copy(
+                routineSheetContent = RoutineSheetContent.Editor(routineId),
+                routineEditorState = editorState
+            )
+        }
+    }
+
+    private fun saveRoutine() {
+        val editor = _internalState.value.routineEditorState
+        val content = _internalState.value.routineSheetContent
+        if (editor.name.isBlank()) return
+
+        viewModelScope.launch {
+            if (content is RoutineSheetContent.Editor && content.routineId != null) {
+                routineRepository.update(
+                    Routine(
+                        id = content.routineId,
+                        name = editor.name,
+                        exerciseIds = editor.selectedExerciseIds.toList()
+                    )
+                )
+            } else {
+                routineRepository.insert(
+                    Routine(name = editor.name, exerciseIds = editor.selectedExerciseIds.toList())
+                )
+            }
+            _internalState.update {
+                it.copy(routineSheetContent = RoutineSheetContent.List)
+            }
+        }
+    }
+
+    private fun deleteRoutine(id: Int) {
+        viewModelScope.launch { routineRepository.delete(id) }
+    }
+
+    private fun applyRoutine(routine: Routine) {
+        _internalState.update { state ->
+            state.copy(
+                selectedExerciseIds = routine.exerciseIds.toMutableSet(),
+                routinesSheetVisible = false,
+                routineSheetContent = RoutineSheetContent.List,
+                routineEditorState = RoutineEditorState()
+            )
+        }
+    }
+
+    private fun closeRoutinesSheet() {
+        _internalState.update {
+            it.copy(
+                routinesSheetVisible = false,
+                routineSheetContent = RoutineSheetContent.List,
+                routineEditorState = RoutineEditorState()
+            )
+        }
+    }
+
+    private fun toggleRoutineEditorMuscle(muscleId: Int) {
+        _internalState.update { state ->
+            val muscles = state.routineEditorState.selectedMuscleIds.toMutableSet().apply {
+                if (contains(muscleId)) remove(muscleId) else add(muscleId)
+            }
+            state.copy(routineEditorState = state.routineEditorState.copy(selectedMuscleIds = muscles))
+        }
+    }
+
+    private fun toggleRoutineEditorExercise(exerciseId: Int) {
+        _internalState.update { state ->
+            val exercises = state.routineEditorState.selectedExerciseIds.toMutableSet().apply {
+                if (contains(exerciseId)) remove(exerciseId) else add(exerciseId)
+            }
+            state.copy(routineEditorState = state.routineEditorState.copy(selectedExerciseIds = exercises))
         }
     }
 
@@ -397,6 +508,10 @@ class ExerciseListViewModel(
         val plannedTodayDialogVisible: Boolean = false,
         val plannedExercisesForToday: List<Int> = emptyList(),
         val selectedMuscleIds: MutableSet<Int> = mutableSetOf(),
-        val selectedExerciseIds: MutableSet<Int> = mutableSetOf()
+        val selectedExerciseIds: MutableSet<Int> = mutableSetOf(),
+        val routines: List<Routine> = emptyList(),
+        val routinesSheetVisible: Boolean = false,
+        val routineSheetContent: RoutineSheetContent = RoutineSheetContent.List,
+        val routineEditorState: RoutineEditorState = RoutineEditorState()
     )
 }

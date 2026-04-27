@@ -60,4 +60,11 @@
     <string name="delete_set_dialog_message">Esto eliminará permanentemente este set y actualizará tus gráficas.</string>
     <string name="planned_workout_dialog_title">Entrenar rutina agendada?</string>
     <string name="planned_workout_dialog_message">Se encontró una rutina agendada para hoy, iniciar con el entro?</string>
+    <string name="routines">Rutinas</string>
+    <string name="new_routine">Nueva rutina</string>
+    <string name="routine_name">Nombre de la rutina</string>
+    <string name="no_routines_found">No hay rutinas guardadas</string>
+    <string name="save_routine">Guardar</string>
+    <string name="edit_routine_title">Editar rutina</string>
+    <string name="new_routine_title">Nueva rutina</string>
 </resources>

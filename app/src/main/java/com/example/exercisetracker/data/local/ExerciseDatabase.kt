@@ -10,10 +10,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.exercisetracker.data.converter.IntListConverter
 import com.example.exercisetracker.data.local.dao.ExerciseDao
 import com.example.exercisetracker.data.local.dao.MuscleDao
+import com.example.exercisetracker.data.local.dao.RoutineDao
 import com.example.exercisetracker.data.local.dao.WorkoutDao
 import com.example.exercisetracker.data.local.dao.WorkoutPlanDao
 import com.example.exercisetracker.data.local.entity.ExerciseEntity
 import com.example.exercisetracker.data.local.entity.MuscleEntity
+import com.example.exercisetracker.data.local.entity.RoutineEntity
 import com.example.exercisetracker.data.local.entity.WorkoutPlanEntity
 import com.example.exercisetracker.data.local.entity.WorkoutSessionEntity
 import com.example.exercisetracker.data.local.entity.WorkoutSetEntity
@@ -24,9 +26,10 @@ import com.example.exercisetracker.data.local.entity.WorkoutSetEntity
         MuscleEntity::class,
         WorkoutSessionEntity::class,
         WorkoutSetEntity::class,
-        WorkoutPlanEntity::class
+        WorkoutPlanEntity::class,
+        RoutineEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(IntListConverter::class)
@@ -35,6 +38,7 @@ abstract class ExerciseDatabase : RoomDatabase() {
     abstract fun muscleDao(): MuscleDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun workoutPlanDao(): WorkoutPlanDao
+    abstract fun routineDao(): RoutineDao
 
     companion object {
         @Volatile
@@ -47,7 +51,7 @@ abstract class ExerciseDatabase : RoomDatabase() {
                     klass = ExerciseDatabase::class.java,
                     name = "exercise_database"
                 )
-                    .addMigrations(MIGRATION_5_6)
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7)
                     .addCallback(ExerciseDatabaseCallback())
                     .build()
                     .also { Instance = it }
@@ -58,6 +62,14 @@ abstract class ExerciseDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `workout_plan` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` INTEGER NOT NULL, `exercises` TEXT NOT NULL)"
+                )
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `routines` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `exerciseIds` TEXT NOT NULL)"
                 )
             }
         }
