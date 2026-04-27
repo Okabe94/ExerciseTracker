@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -81,7 +82,7 @@ import java.util.Locale.getDefault
 
 @Composable
 fun MetricsRoot(
-    viewModel: MetricsViewModel = viewModel()
+    viewModel: MetricsViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -205,7 +206,7 @@ fun ExpandableSetView(
     modifier: Modifier = Modifier,
     onClick: (String) -> Unit,
     label: String,
-    isExpanded: Boolean
+    isExpanded: Boolean,
 ) {
     Row(
         modifier = modifier
@@ -234,7 +235,7 @@ fun ExpandableSetView(
 private fun MetricSetRow(
     set: MetricGraphData,
     setNumber: Int,
-    onDeleteClick: (Int) -> Unit
+    onDeleteClick: (Int) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -335,7 +336,7 @@ private fun MetricSetRow(
 @Composable
 private fun DeleteConfirmationDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -361,7 +362,7 @@ private fun SetInfoRow(
     weight: Float,
     reps: Int,
     unit: String = "lbs",
-    isLastSet: Boolean = false
+    isLastSet: Boolean = false,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -376,7 +377,7 @@ private fun SetInfoRow(
 private fun OverallActivityCard(
     totalWorkouts: Int,
     thisWeek: Int,
-    avgPerWeek: Double
+    avgPerWeek: Double,
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -416,7 +417,7 @@ private fun ExerciseSelectorHeader(
     onExpandedChange: (Boolean) -> Unit,
     muscleGroups: List<Muscle>,
     exerciseList: List<Exercise>,
-    expanded: Boolean
+    expanded: Boolean,
 ) {
     Column(
         modifier = Modifier
@@ -489,7 +490,7 @@ private fun ExerciseSummaryCard(
     totalSets: Int,
     prWeight: Float,
     prReps: Int,
-    prDate: String
+    prDate: String,
 ) {
     if (exerciseName == null) return
 
@@ -636,7 +637,7 @@ private fun StatItem(
 private fun FilterSection(
     onFilterSelected: (TimeFilter) -> Unit,
     filters: List<TimeFilter>,
-    selected: TimeFilter
+    selected: TimeFilter,
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -736,7 +737,7 @@ private fun EmptyDataSection(modifier: Modifier = Modifier) {
 private fun Graph(
     modifier: Modifier = Modifier,
     mode: TypeFilter,
-    data: Map<String, Double>
+    data: Map<String, Double>,
 ) {
     if (data.isEmpty()) return
 
@@ -756,7 +757,7 @@ private fun Graph(
 
     val height = data.keys.size * 60
 
-    RowChart(
+    key(data) { RowChart(
         modifier = modifier
             .fillMaxWidth()
             .height(height.dp)
@@ -787,7 +788,10 @@ private fun Graph(
             stiffness = Spring.StiffnessMedium
         ),
         indicatorProperties = VerticalIndicatorProperties(
-            textStyle = style
+            textStyle = style,
+            contentBuilder = { value ->
+                String.format(getDefault(), "%,.0f", value)
+            }
         ),
         labelProperties = LabelProperties(
             enabled = true,
@@ -801,12 +805,12 @@ private fun Graph(
         popupProperties = PopupProperties(
             enabled = true,
             contentBuilder = { popUp ->
-                "${String.format(getDefault(), "%.2f", popUp.value)} $dataLabel"
+                "${String.format(getDefault(), "%,.0f", popUp.value)} $dataLabel"
             },
             textStyle = style,
             containerColor = MaterialTheme.colorScheme.surface
         )
-    )
+    ) }
 }
 
 @Preview(uiMode = UI_MODE_NIGHT_YES)
