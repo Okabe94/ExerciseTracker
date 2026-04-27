@@ -22,5 +22,17 @@ data class MetricsState(
     val groupedSets: Map<String, List<MetricGraphData>> = emptyMap(),
     val expandedSets: Set<String> = emptySet(),
     val showDeleteConfirmation: Boolean = false,
-    val setIdToDelete: Int? = null
+    val setIdToDelete: Int? = null,
+    // Per-exercise stats (period-sensitive)
+    val totalVolume: Double = 0.0,
+    val totalSessions: Int = 0,
+    val totalSets: Int = 0,
+    // PR (always all-time)
+    val prWeight: Float = 0f,
+    val prReps: Int = 0,
+    val prDate: String = "",
+    // Overall activity stats
+    val totalWorkoutsAllTime: Int = 0,
+    val workoutsThisWeek: Int = 0,
+    val avgWorkoutsPerWeek: Double = 0.0
 )

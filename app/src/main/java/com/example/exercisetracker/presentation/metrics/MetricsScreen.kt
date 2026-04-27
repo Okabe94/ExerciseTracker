@@ -105,6 +105,14 @@ fun MetricsScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top)
         ) {
             item {
+                OverallActivityCard(
+                    totalWorkouts = state.totalWorkoutsAllTime,
+                    thisWeek = state.workoutsThisWeek,
+                    avgPerWeek = state.avgWorkoutsPerWeek
+                )
+            }
+
+            item {
                 ExerciseSelectorHeader(
                     selectedExercise = state.selectedExercise,
                     selectedMuscleId = state.filteredMuscleId,
@@ -133,7 +141,13 @@ fun MetricsScreen(
                     exerciseName = state.selectedExercise,
                     averageReps = state.averageReps,
                     maxWeight = state.maxWeight,
-                    estimated1RM = state.rm
+                    estimated1RM = state.rm,
+                    totalVolume = state.totalVolume,
+                    totalSessions = state.totalSessions,
+                    totalSets = state.totalSets,
+                    prWeight = state.prWeight,
+                    prReps = state.prReps,
+                    prDate = state.prDate
                 )
             }
 
@@ -359,6 +373,41 @@ private fun SetInfoRow(
 }
 
 @Composable
+private fun OverallActivityCard(
+    totalWorkouts: Int,
+    thisWeek: Int,
+    avgPerWeek: Double
+) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StatItem(
+                modifier = Modifier.weight(1f),
+                withLabel = false,
+                label = stringResource(R.string.total_workouts_label),
+                value = "$totalWorkouts"
+            )
+            StatItem(
+                modifier = Modifier.weight(1f),
+                withLabel = false,
+                label = stringResource(R.string.this_week_label),
+                value = "$thisWeek"
+            )
+            StatItem(
+                modifier = Modifier.weight(1f),
+                withLabel = false,
+                label = stringResource(R.string.avg_per_week_label),
+                value = String.format(getDefault(), "%.1f", avgPerWeek)
+            )
+        }
+    }
+}
+
+@Composable
 private fun ExerciseSelectorHeader(
     selectedExercise: Exercise?,
     selectedMuscleId: Int,
@@ -435,6 +484,12 @@ private fun ExerciseSummaryCard(
     averageReps: Int,
     maxWeight: Float,
     estimated1RM: Double,
+    totalVolume: Double,
+    totalSessions: Int,
+    totalSets: Int,
+    prWeight: Float,
+    prReps: Int,
+    prDate: String
 ) {
     if (exerciseName == null) return
 
@@ -481,6 +536,58 @@ private fun ExerciseSummaryCard(
                     modifier = Modifier.weight(1f),
                     label = stringResource(R.string.est_1rm),
                     value = String.format(getDefault(), "%.2f", estimated1RM),
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outline
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    modifier = Modifier.weight(1f),
+                    label = stringResource(R.string.total_volume_label),
+                    value = String.format(getDefault(), "%.1f", totalVolume),
+                )
+                StatItem(
+                    modifier = Modifier.weight(1f),
+                    withLabel = false,
+                    label = stringResource(R.string.sessions_count_label),
+                    value = "$totalSessions",
+                )
+                StatItem(
+                    modifier = Modifier.weight(1f),
+                    withLabel = false,
+                    label = stringResource(R.string.sets_count_label),
+                    value = "$totalSets",
+                )
+            }
+
+            if (prWeight > 0f) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Text(
+                    text = stringResource(R.string.personal_record_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "$prWeight ${stringResource(R.string.kg)} × $prReps ${stringResource(R.string.reps_small)} — $prDate",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -566,6 +673,10 @@ private fun GraphMetricToggle(
         TypeFilter.REPS to Pair(
             stringResource(R.string.graph_reps_label),
             ImageVector.vectorResource(R.drawable.outline_repeat_24)
+        ),
+        TypeFilter.VOLUME to Pair(
+            stringResource(R.string.volume_type_label),
+            ImageVector.vectorResource(R.drawable.outline_data_usage_24)
         )
     )
 
@@ -632,6 +743,7 @@ private fun Graph(
     val dataLabel = when (mode) {
         TypeFilter.REPS -> stringResource(R.string.reps_small)
         TypeFilter.WEIGHT -> stringResource(R.string.kg)
+        TypeFilter.VOLUME -> stringResource(R.string.kg)
     }
 
     val style = with(MaterialTheme.typography.labelMedium) {

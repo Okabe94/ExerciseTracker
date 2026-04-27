@@ -115,6 +115,16 @@ class WorkoutRepository(
         )
     }
 
+    override fun getTotalWorkoutCount(): Flow<Int> = workoutDao.getTotalWorkoutCount()
+
+    override fun getWorkoutsThisWeek(startOfWeek: Long): Flow<Int> =
+        workoutDao.getWorkoutsThisWeek(startOfWeek)
+
+    override fun getFirstWorkoutTime(): Flow<Long?> = workoutDao.getFirstWorkoutTime()
+
+    override fun getBestSet(exerciseId: Int): Flow<MetricGraphData?> =
+        workoutDao.getBestSet(exerciseId)
+
     override suspend fun getWorkoutReview(day: Int): Flow<List<WorkoutReview>> {
         val startOfDay = getDayOfWeek(day.toLong())
         val endOfDay = startOfDay.plusDays(1)

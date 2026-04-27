@@ -51,12 +51,39 @@ class MetricsViewModel(
         }
     }
 
+    private val _bestSetState = _filterState.flatMapLatest { filters ->
+        if (filters.selectedExercise != null)
+            workoutRepository.getBestSet(filters.selectedExercise.id)
+        else flowOf(null)
+    }
+
+    init {
+        viewModelScope.launch {
+            workoutRepository.getTotalWorkoutCount().collect { count ->
+                _internalState.update { it.copy(totalWorkoutsAllTime = count) }
+            }
+        }
+        viewModelScope.launch {
+            workoutRepository.getWorkoutsThisWeek(
+                clock.getMillisForStartOfDayInWeek(1)
+            ).collect { count ->
+                _internalState.update { it.copy(workoutsThisWeek = count) }
+            }
+        }
+        viewModelScope.launch {
+            workoutRepository.getFirstWorkoutTime().collect { time ->
+                _internalState.update { it.copy(firstWorkoutTime = time) }
+            }
+        }
+    }
+
     val state = combine(
         _musclesAndExercises,
         _filterState,
         _internalState,
-        _graphDataState
-    ) { musclesAndExercises, filter, internal, graph ->
+        _graphDataState,
+        _bestSetState
+    ) { musclesAndExercises, filter, internal, graph, bestSet ->
         val filteredExercises =
             if (internal.muscleSelected != null) {
                 musclesAndExercises.second.filter { it.targetMuscleId == internal.muscleSelected.id }
@@ -76,6 +103,16 @@ class MetricsViewModel(
         val rm = graph.maxByOrNull { it.weight }?.let {
             it.weight * (1 + connerConstant * it.reps)
         } ?: 0.0
+
+        val totalVolume = graph.sumOf { it.weight.toDouble() * it.reps }
+        val totalSets = graph.size
+        val totalSessions = graph.map { it.sessionId }.distinct().size
+        val avgPerWeek = if (internal.firstWorkoutTime == null || internal.totalWorkoutsAllTime == 0) 0.0
+        else {
+            val weeks = (clock.now() - internal.firstWorkoutTime) / (7.0 * 24 * 3600 * 1000)
+            internal.totalWorkoutsAllTime / weeks.coerceAtLeast(1.0)
+        }
+        val prDate = bestSet?.let { clock.getDateLabelFromMillis(it.startTime) } ?: ""
 
         val processedData = processGraphData(
             data = graph,
@@ -99,7 +136,16 @@ class MetricsViewModel(
             groupedSets = processedData.second,
             expandedSets = internal.expandedSets,
             showDeleteConfirmation = internal.setIdToDelete != null,
-            setIdToDelete = internal.setIdToDelete
+            setIdToDelete = internal.setIdToDelete,
+            totalVolume = totalVolume,
+            totalSessions = totalSessions,
+            totalSets = totalSets,
+            prWeight = bestSet?.weight ?: 0f,
+            prReps = bestSet?.reps ?: 0,
+            prDate = prDate,
+            totalWorkoutsAllTime = internal.totalWorkoutsAllTime,
+            workoutsThisWeek = internal.workoutsThisWeek,
+            avgWorkoutsPerWeek = avgPerWeek
         )
     }.stateIn(
         scope = viewModelScope,
@@ -147,10 +193,10 @@ class MetricsViewModel(
                 TimeFilter.ALL -> "Periodo $relativeIndex"
             }
 
-            val value = if (typeFilter == TypeFilter.WEIGHT) {
-                bucketData.sumOf { it.weight.toDouble() } / bucketData.size
-            } else {
-                bucketData.sumOf { it.reps }.toDouble()
+            val value = when (typeFilter) {
+                TypeFilter.WEIGHT -> bucketData.sumOf { it.weight.toDouble() } / bucketData.size
+                TypeFilter.REPS -> bucketData.sumOf { it.reps }.toDouble()
+                TypeFilter.VOLUME -> bucketData.sumOf { it.weight.toDouble() * it.reps }
             }
 
             graphPoints[label] = value
@@ -210,7 +256,10 @@ class MetricsViewModel(
         val expandedList: Boolean = false,
         val muscleSelected: Muscle? = null,
         val expandedSets: Set<String> = emptySet(),
-        val setIdToDelete: Int? = null
+        val setIdToDelete: Int? = null,
+        val totalWorkoutsAllTime: Int = 0,
+        val workoutsThisWeek: Int = 0,
+        val firstWorkoutTime: Long? = null
     )
 
     private data class FilterState(

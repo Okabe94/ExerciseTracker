@@ -43,5 +43,14 @@ val sampleMetricsState = MetricsState(
         "24/Feb" to 2.0,
         "25/Feb" to 1.0,
         "26/Feb" to 1.5
-    )
+    ),
+    totalVolume = 12500.0,
+    totalSessions = 8,
+    totalSets = 42,
+    prWeight = 100f,
+    prReps = 5,
+    prDate = "15/Mar",
+    totalWorkoutsAllTime = 47,
+    workoutsThisWeek = 3,
+    avgWorkoutsPerWeek = 3.8
 )

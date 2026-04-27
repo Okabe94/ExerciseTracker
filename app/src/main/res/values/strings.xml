@@ -53,8 +53,8 @@
     <string name="delete_workout_dialog_message">Se eliminará el entreno que sucedió este día y no se podrá recuperar.</string>
     <string name="delete_workout_plan_dialog_delete_action">Eliminar</string>
     <string name="metrics_empty_section_message">Selecciona un ejercicio de la lista o realiza entrenamientos para obtener datos</string>
-    <string name="graph_weight_label">Peso promedio</string>
-    <string name="graph_reps_label">Total repeticiones</string>
+    <string name="graph_weight_label">Peso prom.</string>
+    <string name="graph_reps_label">Total reps</string>
     <string name="delete_set">Eliminar set\n</string>
     <string name="delete_set_dialog_title">Eliminar datos de histórico?</string>
     <string name="delete_set_dialog_message">Esto eliminará permanentemente este set y actualizará tus gráficas.</string>
@@ -67,4 +67,13 @@
     <string name="save_routine">Guardar</string>
     <string name="edit_routine_title">Editar rutina</string>
     <string name="new_routine_title">Nueva rutina</string>
+    <string name="total_volume_label">Volumen total</string>
+    <string name="sessions_count_label">Sesiones</string>
+    <string name="sets_count_label">Series</string>
+    <string name="personal_record_label">Récord personal</string>
+    <string name="total_workouts_label">Entrenos</string>
+    <string name="this_week_label">Esta semana</string>
+    <string name="avg_per_week_label">Prom./semana</string>
+    <string name="volume_type_label">Volumen</string>
+    <string name="graph_volume_label">Volumen total (kg)</string>
 </resources>

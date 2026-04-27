@@ -1,5 +1,5 @@
 package com.example.exercisetracker.domain.filter
 
 enum class TypeFilter {
-    REPS, WEIGHT
+    REPS, WEIGHT, VOLUME
 }
