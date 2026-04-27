@@ -1,6 +1,7 @@
 package com.example.exercisetracker.domain.time
 
 import com.example.exercisetracker.domain.filter.TimeFilter
+import java.time.LocalDate
 
 interface AppClock {
     fun now(): Long
@@ -9,4 +10,5 @@ interface AppClock {
     fun getMillisForStartOfDayInWeek(dayOfWeek: Int): Long
     fun getDateLabelFromMillis(millis: Long): String
     fun getMillisFromFilter(timeFilter: TimeFilter): Long
+    fun toLocalDate(millis: Long): LocalDate
 }

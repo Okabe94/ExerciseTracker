@@ -13,6 +13,11 @@ import com.example.exercisetracker.domain.repository.IExerciseRepository
 import com.example.exercisetracker.domain.repository.IMuscleRepository
 import com.example.exercisetracker.domain.repository.IWorkoutRepository
 import com.example.exercisetracker.domain.time.AppClock
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.Month
+import java.time.temporal.ChronoUnit
+import java.time.temporal.WeekFields
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -153,6 +158,31 @@ class MetricsViewModel(
         initialValue = MetricsState()
     )
 
+    private fun spanishDayAbbr(day: DayOfWeek): String = when (day) {
+        DayOfWeek.MONDAY -> "Lun"
+        DayOfWeek.TUESDAY -> "Mar"
+        DayOfWeek.WEDNESDAY -> "Mié"
+        DayOfWeek.THURSDAY -> "Jue"
+        DayOfWeek.FRIDAY -> "Vie"
+        DayOfWeek.SATURDAY -> "Sáb"
+        DayOfWeek.SUNDAY -> "Dom"
+    }
+
+    private fun spanishMonthAbbr(month: Month): String = when (month) {
+        Month.JANUARY -> "Ene"
+        Month.FEBRUARY -> "Feb"
+        Month.MARCH -> "Mar"
+        Month.APRIL -> "Abr"
+        Month.MAY -> "May"
+        Month.JUNE -> "Jun"
+        Month.JULY -> "Jul"
+        Month.AUGUST -> "Ago"
+        Month.SEPTEMBER -> "Sep"
+        Month.OCTOBER -> "Oct"
+        Month.NOVEMBER -> "Nov"
+        Month.DECEMBER -> "Dic"
+    }
+
     private fun processGraphData(
         data: List<MetricGraphData>,
         timeFilter: TimeFilter,
@@ -160,45 +190,81 @@ class MetricsViewModel(
     ): Pair<Map<String, Double>, Map<String, List<MetricGraphData>>> {
         if (data.isEmpty()) return Pair(emptyMap(), emptyMap())
 
-        val grouped = when (timeFilter) {
-            TimeFilter.ONE_WEEK -> data.groupBy { it.startTime / (24 * 3600000L) }
-            TimeFilter.ONE_MONTH -> data.groupBy { it.startTime / (7 * 24 * 3600000L) }
-            TimeFilter.THREE_MONTH,
-            TimeFilter.SIX_MONTH -> data.groupBy { it.startTime / (14 * 24 * 3600000L) }
+        val sortedData = data.sortedBy { it.startTime }
 
-            TimeFilter.ONE_YEAR -> data.groupBy { it.startTime / (30 * 24 * 3600000L) }
-            TimeFilter.ALL -> {
-                val sorted = data.sortedBy { it.startTime }
-                val start = sorted.first().startTime
-                val end = sorted.last().startTime
-                val range = (end - start).coerceAtLeast(1L)
-                val bucketSize = (range / 12).coerceAtLeast(1L)
-                data.groupBy { ((it.startTime - start) / bucketSize).coerceAtMost(11L) }
+        val allMonthsBetween = if (timeFilter == TimeFilter.ALL) {
+            val startDate = clock.toLocalDate(sortedData.first().startTime)
+            val endDate = clock.toLocalDate(sortedData.last().startTime)
+            ChronoUnit.MONTHS.between(startDate, endDate)
+        } else 0L
+
+        // Maps sortKey -> (displayLabel, entries)
+        val bucketMap = mutableMapOf<String, Pair<String, MutableList<MetricGraphData>>>()
+        val epochMonday = LocalDate.of(2000, 1, 3) // reference Monday for week-pair grouping
+
+        for (entry in sortedData) {
+            val date = clock.toLocalDate(entry.startTime)
+            val yr = date.year.toString().takeLast(2)
+
+            val (sortKey, label) = when (timeFilter) {
+                TimeFilter.ONE_WEEK -> {
+                    date.toString() to "${spanishDayAbbr(date.dayOfWeek)} ${date.dayOfMonth}"
+                }
+                TimeFilter.ONE_MONTH -> {
+                    val wf = WeekFields.ISO
+                    val weekYear = date.get(wf.weekBasedYear())
+                    val weekNum = date.get(wf.weekOfWeekBasedYear())
+                    val monday = date.with(DayOfWeek.MONDAY)
+                    "%04d-%02d".format(weekYear, weekNum) to
+                        "%02d/%02d".format(monday.dayOfMonth, monday.monthValue)
+                }
+                TimeFilter.THREE_MONTH -> {
+                    val monday = date.with(DayOfWeek.MONDAY)
+                    val absoluteWeek = ChronoUnit.WEEKS.between(epochMonday, monday)
+                    val pairIndex = absoluteWeek / 2
+                    val periodStart = epochMonday.plusWeeks(pairIndex * 2)
+                    "%010d".format(pairIndex) to
+                        "%02d/%02d".format(periodStart.dayOfMonth, periodStart.monthValue)
+                }
+                TimeFilter.SIX_MONTH -> {
+                    "%04d-%02d".format(date.year, date.monthValue) to
+                        spanishMonthAbbr(date.month)
+                }
+                TimeFilter.ONE_YEAR -> {
+                    "%04d-%02d".format(date.year, date.monthValue) to
+                        "${spanishMonthAbbr(date.month)} '$yr"
+                }
+                TimeFilter.ALL -> when {
+                    allMonthsBetween <= 12L -> {
+                        "%04d-%02d".format(date.year, date.monthValue) to
+                            "${spanishMonthAbbr(date.month)} '$yr"
+                    }
+                    allMonthsBetween <= 24L -> {
+                        val biMonth = (date.monthValue - 1) / 2
+                        val startMonth = Month.of(biMonth * 2 + 1)
+                        "%04d-%d".format(date.year, biMonth) to
+                            "${spanishMonthAbbr(startMonth)} '$yr"
+                    }
+                    else -> {
+                        val quarter = (date.monthValue - 1) / 3 + 1
+                        "%04d-%d".format(date.year, quarter) to "T$quarter '$yr"
+                    }
+                }
             }
+
+            bucketMap.getOrPut(sortKey) { label to mutableListOf() }.second.add(entry)
         }
 
-        val firstBucketKey = grouped.keys.minOrNull() ?: 0L
         val graphPoints = mutableMapOf<String, Double>()
         val groupedSets = mutableMapOf<String, List<MetricGraphData>>()
 
-        grouped.toSortedMap().forEach { (key, bucketData) ->
-            val firstInBucket = bucketData.minBy { it.startTime }
-            val relativeIndex = (key - firstBucketKey).toInt() + 1
-
-            val label = when (timeFilter) {
-                TimeFilter.ONE_WEEK -> clock.getDateLabelFromMillis(firstInBucket.startTime)
-                TimeFilter.ONE_MONTH -> "Semana $relativeIndex"
-                TimeFilter.THREE_MONTH, TimeFilter.SIX_MONTH -> "Par semana $relativeIndex"
-                TimeFilter.ONE_YEAR -> "Mes $relativeIndex"
-                TimeFilter.ALL -> "Periodo $relativeIndex"
-            }
-
+        bucketMap.toSortedMap().forEach { (_, pair) ->
+            val (label, bucketData) = pair
             val value = when (typeFilter) {
                 TypeFilter.WEIGHT -> bucketData.sumOf { it.weight.toDouble() } / bucketData.size
                 TypeFilter.REPS -> bucketData.sumOf { it.reps }.toDouble()
                 TypeFilter.VOLUME -> bucketData.sumOf { it.weight.toDouble() * it.reps }
             }
-
             graphPoints[label] = value
             groupedSets[label] = bucketData
         }

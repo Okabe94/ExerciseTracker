@@ -6,6 +6,7 @@ import com.example.exercisetracker.domain.filter.TimeFilter
 import com.example.exercisetracker.domain.time.AppClock
 import com.example.exercisetracker.domain.timezone.AppTimeZone
 import java.time.Instant
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.time.ExperimentalTime
 
@@ -32,6 +33,9 @@ class ExerciseClock(
 
     override fun getDateLabelFromMillis(millis: Long): String =
         zonedDateTimeFromMillis(millis).format(dateLabelFormatter)
+
+    override fun toLocalDate(millis: Long): LocalDate =
+        zonedDateTimeFromMillis(millis).toLocalDate()
 
     override fun getMillisFromFilter(timeFilter: TimeFilter): Long {
         if (timeFilter == TimeFilter.ALL) return 0L
